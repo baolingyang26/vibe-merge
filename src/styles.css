@@ -89,6 +89,16 @@ code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .commitSubject { margin: 0 0 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .branchStatuses { display: flex; flex-wrap: wrap; gap: 5px; }
 .statusPill { padding: 5px 8px; border: 0; border-radius: 7px; background: var(--canvas); color: var(--secondary); font-size: 10px; line-height: 1.3; }
+.statusPill.attention { background: #edf3ff; color: #315a9a; font-weight: 600; }
+.branchProgress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 16px 0 1px; }
+.progressStage { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--secondary); font-size: 10px; }
+.progressStage:not(:last-child)::after { content: ''; position: absolute; top: 4px; left: 13px; right: -1px; height: 1px; background: var(--line); }
+.progressDot { width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 50%; background: var(--surface); }
+.progressStage.is-done .progressDot { border-color: var(--text); background: var(--text); }
+.progressStage.is-attention .progressDot, .progressStage.is-unknown .progressDot { border-color: #315a9a; background: #edf3ff; }
+.progressStage.is-attention .progressName, .progressStage.is-unknown .progressName { color: #315a9a; }
+.progressName { color: var(--text); font-weight: 650; }
+.progressDetail { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusPill.prominent { flex: none; border-color: var(--text); background: var(--text); color: var(--surface); font-weight: 650; }
 .branchDetails .worktree { margin-top: 10px; padding: 8px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
 .branchDetails .worktree summary { color: var(--secondary); font-size: 11px; }
@@ -115,6 +125,9 @@ a:hover { text-decoration-color: currentColor; }
 ::-webkit-scrollbar-track { background: transparent; }
 @media (prefers-color-scheme: dark) {
   .brandLogo { filter: invert(1); }
+  .statusPill.attention { background: #24334b; color: #b9d1ff; }
+  .progressStage.is-attention .progressDot, .progressStage.is-unknown .progressDot { border-color: #b9d1ff; background: #24334b; }
+  .progressStage.is-attention .progressName, .progressStage.is-unknown .progressName { color: #b9d1ff; }
   :root { color: #f5f5f5; background: #1c1c1c; --canvas: #1c1c1c; --surface: #282828; --surface-subtle: #303030; --text: #f5f5f5; --secondary: #b0b0b0; --line: #454545; --control: #363636; --control-hover: #484848; --focus: #c7c7c7; }
   input[type='checkbox'] { accent-color: #c7c7c7; }
   a { text-decoration-color: #909090; }
