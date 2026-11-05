@@ -34,7 +34,7 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh }: 
   const [draft, setDraft] = useState(false);
   const [prResult, setPrResult] = useState<PrResult | null>(null);
   const dirty = Boolean(worktree && hasChanges(worktree));
-  const canCommit = Boolean(worktree && dirty && !worktree.scanError && !branch.isBase && !coding);
+  const canCommit = Boolean(worktree && worktree.dirty.staged + worktree.dirty.unstaged > 0 && !worktree.scanError && !branch.isBase && !coding);
   const canPr = !branch.isBase && branch.mergedIntoBase !== true && !dirty && !worktree?.scanError && !coding;
   const existingPr = prPreview?.existing.find((pr) => pr.baseRefName === base);
 
