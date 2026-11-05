@@ -41,10 +41,13 @@ header > div { flex: 1; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { .isRefreshing svg { animation: none; } main, .rail { transition: none; transform: none; } }
 .projectTabBar { display: flex; align-items: center; gap: 5px; padding-bottom: 5px; }
 .projectTabs { display: flex; flex: 1; gap: 7px; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
-.projectTabs button { max-width: 200px; overflow: hidden; text-overflow: ellipsis; padding: 9px 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); font-size: 13px; color: var(--secondary); }
-.projectTabs button[aria-selected='true'] { border-color: var(--text); background: var(--text); color: var(--surface); font-weight: 600; }
+.projectTabs button { max-width: 200px; overflow: hidden; text-overflow: ellipsis; padding: 9px 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); font-size: 13px; color: var(--secondary); user-select: none; }
+.projectTabs button[aria-selected='true'] { border-color: var(--text); background: var(--text); color: var(--surface); font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 .addTab { margin-left: auto; }
-.addProjectForm { padding: 8px 0 16px; border-bottom: 1px solid var(--line); }
+.addProjectForm { margin-top: 24px; padding: 20px; border: 0; border-radius: 19px; background: var(--surface); }
+.projectContextMenu { position: fixed; z-index: 20; min-width: 128px; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: 0 8px 28px #0000001a; }
+.projectContextMenu button { display: block; width: 100%; text-align: left; background: transparent; }
+.projectContextMenu button:hover { background: var(--control); }
 .formActions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
 h2 { margin: 0; font-size: 23px; font-weight: 650; letter-spacing: -.025em; overflow-wrap: anywhere; }
 p { line-height: 1.5; }
@@ -70,7 +73,7 @@ label { display: block; margin: 10px 0 6px; color: var(--secondary); font-size: 
 .listOptions { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .listOptions label { margin: 3px 0; }
 .project { margin-top: 22px; padding-top: 0; }
-.projectMeta { margin: 6px 0 12px; color: var(--secondary); font-size: 11px; }
+.projectMeta { margin: 0 0 12px; color: var(--secondary); font-size: 11px; }
 .projectHeading button { padding: 5px 8px; color: var(--secondary); font-size: 11px; background: transparent; }
 .projectHeading button:hover { background: var(--control); color: var(--text); }
 .project > small { display: block; margin-top: 5px; }

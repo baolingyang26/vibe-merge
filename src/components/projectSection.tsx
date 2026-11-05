@@ -5,7 +5,7 @@ import { BranchRow } from './branchRow';
 import { DeploymentPanel } from './deploymentPanel';
 import { WorktreeRow } from './worktreeRow';
 
-export const ProjectSection = ({ project, query, filter, showMerged, showAllBranches, expanded, nowSeconds, busy, onRemove }: {
+export const ProjectSection = ({ project, query, filter, showMerged, showAllBranches, expanded, nowSeconds }: {
   project: ProjectStatus;
   query: string;
   filter: string;
@@ -13,8 +13,6 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
   showAllBranches: boolean;
   expanded: boolean;
   nowSeconds: number;
-  busy: boolean;
-  onRemove: (id: string) => void;
 }) => {
   const [deployments, setDeployments] = useState<DeploymentEvidence[]>([]);
   const branches = project.git?.branches.filter((branch) => {
@@ -32,7 +30,6 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
   const path = project.git?.worktrees.find((item) => !item.scanError)?.path ?? project.config.path;
   const detached = project.git?.worktrees.filter((item) => !item.branch && `${item.path} ${item.head}`.toLowerCase().includes(query.toLowerCase()));
   return <section className="project" aria-label={project.config.path}>
-    <div className="projectHeading"><h2>{project.config.path.split('/').filter(Boolean).at(-1)}</h2><button disabled={busy} onClick={() => onRemove(project.config.id)}>移出</button></div>
     <p className="projectMeta">{project.git?.branchCount ?? '?'} 个本地分支 · {project.git?.worktrees.length ?? '?'} 个工作目录 · 基线 {project.config.baseBranch}</p>
     {project.error && <p className="error">{project.error}</p>}
     {branches?.map((branch) => <BranchRow key={branch.name} branch={branch} project={project} deployments={deployments} nowSeconds={nowSeconds} />)}

@@ -20,6 +20,8 @@ export const App = () => {
   const [showAllBranches, setShowAllBranches] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [addingProject, setAddingProject] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ id: string; left: number; top: number } | null>(null);
+  const previousProjectRef = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const refreshingRef = useRef(false);
   const expandedRef = useRef(false);
@@ -27,8 +29,24 @@ export const App = () => {
   const switchingRef = useRef(false);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const summary = getDockSummary(snapshot, nowSeconds);
-  const selectedProjectId = snapshot?.projects.some((project) => project.config.id === activeProjectId)
-    ? activeProjectId : snapshot?.projects[0]?.config.id;
+  const selectedProjectId = addingProject && activeProjectId === 'new-project' ? 'new-project'
+    : snapshot?.projects.some((project) => project.config.id === activeProjectId)
+      ? activeProjectId : snapshot?.projects[0]?.config.id;
+  const tabCount = (snapshot?.projects.length ?? 0) + (addingProject ? 1 : 0);
+  const selectTab = (index: number) => {
+    const id = index === snapshot?.projects.length ? 'new-project' : snapshot?.projects[index]?.config.id;
+    if (id) { setActiveProjectId(id); document.getElementById(`project-tab-${index}`)?.focus(); }
+  };
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleDismiss = () => setContextMenu(null);
+    document.addEventListener('pointerdown', handleDismiss);
+    window.addEventListener('blur', handleDismiss);
+    return () => {
+      document.removeEventListener('pointerdown', handleDismiss);
+      window.removeEventListener('blur', handleDismiss);
+    };
+  }, [contextMenu]);
 
   const requestExpansion = useCallback(async (next: boolean) => {
     requestedRef.current = next;
@@ -69,11 +87,11 @@ export const App = () => {
     setBusy(true); setError('');
     try {
       const added = await invoke<ProjectConfig>('add_project', { path: path.trim(), ...(baseBranch.trim() ? { baseBranch: baseBranch.trim() } : {}) });
+      await handleRefresh();
       setActiveProjectId(added.id);
       setAddingProject(false);
       setPath('');
       setBaseBranch('');
-      await handleRefresh();
     } catch (cause) { setError(String(cause)); }
     finally { setBusy(false); }
   };
@@ -102,31 +120,55 @@ export const App = () => {
         <button className={`iconButton ${busy ? 'isRefreshing' : ''}`} aria-label={busy ? '正在刷新' : '刷新'} title="刷新" disabled={busy} onClick={() => void handleRefresh()}><PanelIcon name="refresh" /></button>
       </header>
       <div className="projectTabBar"><div className="projectTabs" role="tablist" aria-label="项目">
-        {snapshot?.projects.map((project, index, projects) => <button role="tab" id={`project-tab-${index}`} aria-selected={selectedProjectId === project.config.id} aria-controls={`project-panel-${index}`} tabIndex={selectedProjectId === project.config.id ? 0 : -1} key={project.config.id} title={project.config.path} onClick={() => setActiveProjectId(project.config.id)} onKeyDown={(event) => {
+        {snapshot?.projects.map((project, index) => <button role="tab" id={`project-tab-${index}`} aria-selected={selectedProjectId === project.config.id} aria-controls={`project-panel-${index}`} tabIndex={selectedProjectId === project.config.id ? 0 : -1} key={project.config.id} title={`${project.config.path} · 右键可移出`} onClick={() => { setContextMenu(null); setActiveProjectId(project.config.id); }} onContextMenu={(event) => {
+          event.preventDefault(); setActiveProjectId(project.config.id);
+          setContextMenu({ id: project.config.id, left: Math.min(event.clientX, window.innerWidth - 140), top: Math.min(event.clientY, window.innerHeight - 54) });
+        }} onKeyDown={(event) => {
           let next = index;
-          if (event.key === 'ArrowRight') next = (index + 1) % projects.length;
-          else if (event.key === 'ArrowLeft') next = (index - 1 + projects.length) % projects.length;
+          if (event.key === 'ArrowRight') next = (index + 1) % tabCount;
+          else if (event.key === 'ArrowLeft') next = (index - 1 + tabCount) % tabCount;
           else if (event.key === 'Home') next = 0;
-          else if (event.key === 'End') next = projects.length - 1;
+          else if (event.key === 'End') next = tabCount - 1;
+          else if (event.key === 'Escape') { setContextMenu(null); return; }
           else return;
-          event.preventDefault(); setActiveProjectId(projects[next]?.config.id ?? null); document.getElementById(`project-tab-${next}`)?.focus();
+          event.preventDefault(); selectTab(next);
         }}>{project.config.path.split('/').filter(Boolean).at(-1)}</button>)}
-      </div><button className="iconButton addTab" aria-label="添加项目" title="添加项目" aria-expanded={addingProject} aria-controls="add-project-form" onClick={() => setAddingProject((value) => !value)}><PanelIcon name="plus" /></button></div>
-      {addingProject && <form id="add-project-form" className="addProjectForm" noValidate onSubmit={(event) => { event.preventDefault(); void handleAdd(); }}>
-        <label htmlFor="projectPath">Git 项目绝对路径</label><input autoFocus id="projectPath" placeholder="/Users/you/projects/repo" value={path} onChange={(event) => setPath(event.currentTarget.value)} />
-        <label htmlFor="baseBranch">比较基线（可选）</label><input id="baseBranch" placeholder="main" value={baseBranch} onChange={(event) => setBaseBranch(event.currentTarget.value)} />
-        <div className="formActions"><button type="button" onClick={() => setAddingProject(false)}>取消</button><button disabled={busy} type="submit">添加项目</button></div>
-      </form>}
+        {addingProject && <button role="tab" id={`project-tab-${snapshot?.projects.length ?? 0}`} aria-selected={selectedProjectId === 'new-project'} aria-controls="new-project-panel" tabIndex={selectedProjectId === 'new-project' ? 0 : -1} onClick={() => setActiveProjectId('new-project')} onKeyDown={(event) => {
+          const index = tabCount - 1;
+          let next = index;
+          if (event.key === 'ArrowRight') next = 0;
+          else if (event.key === 'ArrowLeft') next = (index - 1 + tabCount) % tabCount;
+          else if (event.key === 'Home') next = 0;
+          else if (event.key === 'End') next = index;
+          else return;
+          event.preventDefault(); selectTab(next);
+        }}>New Project</button>}
+      </div><button className="iconButton addTab" aria-label="添加项目" title="添加项目" aria-controls="new-project-panel" onClick={() => {
+        if (!addingProject) { previousProjectRef.current = selectedProjectId ?? null; setAddingProject(true); setError(''); }
+        setActiveProjectId('new-project');
+      }}><PanelIcon name="plus" /></button></div>
+      {contextMenu && <div className="projectContextMenu" role="menu" aria-label="项目操作" style={{ left: contextMenu.left, top: contextMenu.top }} onPointerDown={(event) => event.stopPropagation()}>
+        <button role="menuitem" disabled={busy} onClick={() => { const id = contextMenu.id; setContextMenu(null); void handleRemove(id); }}>移出项目</button>
+      </div>}
+      {addingProject && <div role="tabpanel" id="new-project-panel" aria-labelledby={`project-tab-${snapshot?.projects.length ?? 0}`} hidden={selectedProjectId !== 'new-project'}>
+        <form className="addProjectForm" noValidate onSubmit={(event) => { event.preventDefault(); void handleAdd(); }}>
+          <label htmlFor="projectPath">Git 项目绝对路径</label><input autoFocus id="projectPath" placeholder="/Users/you/projects/repo" value={path} onChange={(event) => setPath(event.currentTarget.value)} />
+          <label htmlFor="baseBranch">比较基线（可选）</label><input id="baseBranch" placeholder="main" value={baseBranch} onChange={(event) => setBaseBranch(event.currentTarget.value)} />
+          <div className="formActions"><button type="button" onClick={() => { setAddingProject(false); setActiveProjectId(previousProjectRef.current); setPath(''); setBaseBranch(''); setError(''); }}>取消</button><button disabled={busy} type="submit">保存项目</button></div>
+        </form>
+      </div>}
+      <div aria-live="polite">{error && <p className="error">{error}</p>}</div>
+      {selectedProjectId !== 'new-project' && <>
       <section className="toolbar" aria-label="筛选分支">
         <div className="filters">{[['all', '全部'], ['dirty', '未提交'], ['commits', '未合并'], ['active', '活动会话']].map(([value, label]) =>
           <button aria-pressed={filter === value} key={value} onClick={() => setFilter(value ?? 'all')}>{label}</button>)}</div>
       </section>
       <div className="listOptions"><label><input type="checkbox" checked={showAllBranches} onChange={(event) => setShowAllBranches(event.currentTarget.checked)} /> 显示未检出的本地分支</label>
         <label><input type="checkbox" checked={showMerged} onChange={(event) => setShowMerged(event.currentTarget.checked)} /> 显示已并入本地基线的分支</label></div>
-      <div aria-live="polite">{error && <p className="error">当前证据可能已过期：{error}</p>}</div>
       {snapshot?.projects.map((project, index) => <div role="tabpanel" id={`project-panel-${index}`} aria-labelledby={`project-tab-${index}`} hidden={selectedProjectId !== project.config.id} key={project.config.id}><ProjectSection project={project} query={query} filter={filter} showMerged={showMerged} showAllBranches={showAllBranches} expanded={expanded && selectedProjectId === project.config.id}
-        nowSeconds={nowSeconds} busy={busy} onRemove={(id) => { void handleRemove(id); }} /></div>)}
-      {snapshot?.projects.length === 0 && <p className="empty">点击项目栏右侧的 ＋ 添加项目。</p>}
+        nowSeconds={nowSeconds} /></div>)}
+      {snapshot?.projects.length === 0 && !addingProject && <p className="empty">点击项目栏右侧的 ＋ 添加项目。</p>}
+      </>}
     </main>
   </div>;
 };
