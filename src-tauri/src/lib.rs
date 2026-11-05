@@ -330,19 +330,10 @@ async fn commit_and_push(
     branch: String,
     head_sha: String,
     expected_status_token: String,
-    selected_paths: Vec<String>,
     message: String,
 ) -> Result<workflow::CommitPushResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        workflow::commit_and_push(
-            app,
-            path,
-            branch,
-            head_sha,
-            expected_status_token,
-            selected_paths,
-            message,
-        )
+        workflow::commit_and_push(app, path, branch, head_sha, expected_status_token, message)
     })
     .await
     .map_err(|error| error.to_string())?

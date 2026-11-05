@@ -24,7 +24,6 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [commitPreview, setCommitPreview] = useState<CommitPreview | null>(null);
-  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [commitResult, setCommitResult] = useState<CommitPushResult | null>(null);
   const [retryHead, setRetryHead] = useState<string | null>(null);
@@ -45,7 +44,6 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh }: 
     try {
       const preview = await invoke<CommitPreview>('prepare_commit', { path: worktree.path, branch: branch.name, headSha: branch.head });
       setCommitPreview(preview);
-      setSelectedPaths(preview.files.map((file) => file.path));
     } catch (cause) { setError(String(cause)); }
     finally { setBusy(false); }
   };
@@ -65,12 +63,12 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh }: 
 
   const handleCommit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!worktree || !commitPreview || selectedPaths.length === 0 || !message.trim()) return;
+    if (!worktree || !commitPreview || !message.trim()) return;
     setBusy(true); setError('');
     try {
       const result = await invoke<CommitPushResult>('commit_and_push', {
         path: worktree.path, branch: branch.name, headSha: commitPreview.headSha,
-        expectedStatusToken: commitPreview.statusToken, selectedPaths, message: message.trim(),
+        expectedStatusToken: commitPreview.statusToken, message: message.trim(),
       });
       setCommitResult(result);
       setRetryHead(result.pushed ? null : result.commitSha);
@@ -125,17 +123,16 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh }: 
     {mode === 'commit' && <form className="workflowForm" noValidate onSubmit={(event) => void handleCommit(event)}>
       <h4>提交并推送 · {branch.name}</h4>
       {commitPreview && <>
-        <p>勾选本次提交的文件。提交前若改动发生变化，需要重新检查。</p>
-        <div className="workflowFiles" role="group" aria-label="选择提交文件">
-          {commitPreview.files.map((file) => <label className="workflowFile" key={file.path}>
-            <input type="checkbox" checked={selectedPaths.includes(file.path)} onChange={(event) => { const checked = event.currentTarget.checked; setSelectedPaths((paths) => checked ? [...paths, file.path] : paths.filter((path) => path !== file.path)); }} />
+        <p>将提交以下全部 {commitPreview.files.length} 个改动文件。提交前若改动发生变化，需要重新检查。</p>
+        <div className="workflowFiles" role="list" aria-label="本次提交的文件">
+          {commitPreview.files.map((file) => <div className="workflowFile" role="listitem" key={file.path}>
             <span>{fileStatus(file)}</span><code title={file.path}>{file.previousPath ? `${file.previousPath} → ` : ''}{file.path}</code>
-          </label>)}
+          </div>)}
         </div>
         <label htmlFor={`${id}-message`}>提交说明</label>
         <input id={`${id}-message`} value={message} maxLength={2000} required placeholder="简述这次改动" onChange={(event) => setMessage(event.currentTarget.value)} />
       </>}
-      <div className="workflowFooter"><button type="button" disabled={busy} onClick={() => { setMode(null); setError(''); }}>取消</button><button type="submit" disabled={busy || coding || !commitPreview || selectedPaths.length === 0 || !message.trim()}>{busy ? '处理中…' : '提交并推送'}</button></div>
+      <div className="workflowFooter"><button type="button" disabled={busy} onClick={() => { setMode(null); setError(''); }}>取消</button><button type="submit" disabled={busy || coding || !commitPreview || !message.trim()}>{busy ? '处理中…' : '提交并推送全部改动'}</button></div>
     </form>}
     {mode === 'pr' && <form className="workflowForm" noValidate onSubmit={(event) => void handleCreatePr(event)}>
       <h4>创建 PR · {branch.name}</h4>

@@ -1,7 +1,7 @@
 use crate::{config, selected_worktree};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map::DefaultHasher, HashSet},
+    collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
     io::Read,
     path::{Path, PathBuf},
@@ -269,26 +269,17 @@ pub fn commit_and_push(
     branch: String,
     head_sha: String,
     expected_status_token: String,
-    selected_paths: Vec<String>,
     message: String,
 ) -> Result<CommitPushResult, String> {
     let root = worktree_context(&app, &path, &branch, &head_sha)?;
-    commit_selected_and_push(
-        &root,
-        &branch,
-        &head_sha,
-        &expected_status_token,
-        selected_paths,
-        &message,
-    )
+    commit_all_and_push(&root, &branch, &head_sha, &expected_status_token, &message)
 }
 
-fn commit_selected_and_push(
+fn commit_all_and_push(
     root: &Path,
     branch: &str,
     expected_head: &str,
     expected_status_token: &str,
-    selected_paths: Vec<String>,
     message: &str,
 ) -> Result<CommitPushResult, String> {
     let message = message.trim();
@@ -304,45 +295,25 @@ fn commit_selected_and_push(
     if status_token(root, &raw, &files) != expected_status_token {
         return Err("改动已变化，请重新检查文件清单".into());
     }
-    let selected = selected_paths.into_iter().collect::<HashSet<_>>();
-    if selected.is_empty() || selected.len() > files.len() {
-        return Err("请至少选择一个文件".into());
+    if files.is_empty() {
+        return Err("这个工作目录没有待提交改动".into());
     }
     let mut paths = Vec::new();
-    let mut new_paths = Vec::new();
-    for file in files.iter().filter(|file| selected.contains(&file.path)) {
+    for file in &files {
         paths.push(file.path.as_str());
         if let Some(previous) = &file.previous_path {
             paths.push(previous.as_str());
         }
-        if file.status == "??" {
-            new_paths.push(file.path.as_str());
-        }
     }
-    if paths.is_empty()
-        || selected.len()
-            != files
-                .iter()
-                .filter(|file| selected.contains(&file.path))
-                .count()
-    {
-        return Err("所选文件不在当前改动清单中，请重新检查".into());
-    }
-    if !new_paths.is_empty() {
-        let mut args = vec!["add", "-N", "--"];
-        args.extend(new_paths.iter().copied());
-        git(root, &args)?;
-    }
-    let mut args = vec!["commit", "--only", "-m", message, "--"];
-    args.extend(paths.iter().copied());
-    if let Err(error) = run(root, "git", &args, Duration::from_secs(120)) {
-        if !new_paths.is_empty() {
-            let mut reset = vec!["reset", "--"];
-            reset.extend(new_paths.iter().copied());
-            let _ = git(root, &reset);
-        }
-        return Err(error);
-    }
+    let mut add = vec!["add", "--all", "--"];
+    add.extend(paths.iter().copied());
+    git(root, &add)?;
+    run(
+        root,
+        "git",
+        &["commit", "-m", message],
+        Duration::from_secs(120),
+    )?;
     let commit_sha = git(root, &["rev-parse", "--verify", "HEAD"])?
         .trim()
         .to_string();
@@ -670,7 +641,7 @@ mod tests {
     }
 
     #[test]
-    fn selected_commit_push_preserves_unselected_staged_file() {
+    fn commit_push_includes_staged_unstaged_and_untracked_changes() {
         let root = std::env::temp_dir().join(format!(
             "global-status-commit-flow-{}-{}",
             std::process::id(),
@@ -714,19 +685,21 @@ mod tests {
         command(&worktree, &["add", "other.txt"]);
         let (raw, files) = current_status(&worktree).unwrap();
         let token = status_token(&worktree, &raw, &files);
-        let result = commit_selected_and_push(
+        let result = commit_all_and_push(
             &worktree,
             "feature",
             command(&worktree, &["rev-parse", "HEAD"]).trim(),
             &token,
-            vec!["selected.txt".into(), "fresh.txt".into()],
-            "selected changes",
+            "all changes",
         )
         .unwrap();
         assert!(result.pushed);
+        assert!(command(&worktree, &["status", "--short"]).trim().is_empty());
         assert_eq!(
-            command(&worktree, &["status", "--short"]).trim(),
-            "M  other.txt"
+            command(&worktree, &["show", "--format=", "--name-only", "HEAD"])
+                .lines()
+                .count(),
+            3
         );
         assert_eq!(
             command(&worktree, &["ls-remote", "origin", "refs/heads/feature"])
