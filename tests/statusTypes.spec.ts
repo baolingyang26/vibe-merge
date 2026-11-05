@@ -27,12 +27,12 @@ test("dock counts risks, active coding branches and merged non-base branches sep
   const project: ProjectStatus = {
     config: { id: "repo", path: "/repo/worktree", baseBranch: "main" },
     git: {
-      id: "repo", path: "/repo/worktree", baseBranch: "main", commonDir: "/repo/.git", branchCount: 3, observedAt: 120,
+      id: "repo", path: "/repo/worktree", baseBranch: "main", currentGitEmail: null, commonDir: "/repo/.git", branchCount: 3, observedAt: 120,
       worktrees: [worktree],
       branches: [
-        { name: "main", head: "b".repeat(40), latestCommitAt: 90, latestCommitSubject: "base", mergedIntoBase: true, isBase: true, worktreePath: null },
-        { name: "feature", head: worktree.head, latestCommitAt: 100, latestCommitSubject: "feature", mergedIntoBase: false, isBase: false, worktreePath: worktree.path },
-        { name: "old", head: "c".repeat(40), latestCommitAt: 80, latestCommitSubject: "old", mergedIntoBase: true, isBase: false, worktreePath: null },
+        { name: "main", head: "b".repeat(40), latestCommitAt: 90, latestCommitSubject: "base", mergedIntoBase: true, isBase: true, worktreePath: null, people: { creator: null, contributors: [], scope: 'recent' } },
+        { name: "feature", head: worktree.head, latestCommitAt: 100, latestCommitSubject: "feature", mergedIntoBase: false, isBase: false, worktreePath: worktree.path, people: { creator: null, contributors: [], scope: 'unique' } },
+        { name: "old", head: "c".repeat(40), latestCommitAt: 80, latestCommitSubject: "old", mergedIntoBase: true, isBase: false, worktreePath: null, people: { creator: null, contributors: [], scope: 'recent' } },
       ],
     },
     error: null,

@@ -310,6 +310,28 @@ async fn load_github_evidence(
 }
 
 #[tauri::command]
+async fn resolve_github_avatars(
+    app: tauri::AppHandle,
+    project_id: String,
+    samples: Vec<String>,
+) -> Result<std::collections::HashMap<String, git::GithubAvatar>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let projects = config::load_projects(
+            &app.path()
+                .app_data_dir()
+                .map_err(|error| error.to_string())?,
+        )?;
+        let project = projects
+            .into_iter()
+            .find(|item| item.id == project_id)
+            .ok_or("项目已移除，请刷新后重试")?;
+        git::resolve_github_avatars(&project, &samples)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 async fn prepare_commit(
     app: tauri::AppHandle,
     path: String,
@@ -596,6 +618,7 @@ pub fn run() {
             remove_project,
             scan_status,
             load_github_evidence,
+            resolve_github_avatars,
             prepare_commit,
             commit_and_push,
             push_branch,

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { getBranchProgress } from '../src/branchProgress';
 import type { BranchSnapshot, DeploymentEvidence, WorktreeSnapshot } from '../src/statusTypes';
 
-const branch: BranchSnapshot = { name: 'feature', head: 'a'.repeat(40), latestCommitAt: 1, latestCommitSubject: 'change', mergedIntoBase: false, isBase: false, worktreePath: '/repo' };
+const branch: BranchSnapshot = { name: 'feature', head: 'a'.repeat(40), latestCommitAt: 1, latestCommitSubject: 'change', mergedIntoBase: false, isBase: false, worktreePath: '/repo', people: { creator: null, contributors: [], scope: 'unique' } };
 const worktree: WorktreeSnapshot = { path: '/repo', branch: 'feature', head: branch.head, dirty: { staged: 0, unstaged: 1, untracked: 0, lastChangedAt: 1 }, comparison: null, comparisonError: null, scanError: null };
 const verified: DeploymentEvidence = { environment: 'staging', service: 'server', status: 'verified', runtimeSha: branch.head, deploymentSha: branch.head, deploymentUrl: null, runtimeSource: 'runtime', reason: null, observedAt: 1 };
 

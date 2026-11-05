@@ -1,5 +1,6 @@
 use crate::config::ProjectConfig;
 use serde::Serialize;
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -50,6 +51,26 @@ pub struct BranchSnapshot {
     pub merged_into_base: Option<bool>,
     pub is_base: bool,
     pub worktree_path: Option<String>,
+    pub people: BranchPeople,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonEvidence {
+    pub name: String,
+    pub email: String,
+    pub commits: usize,
+    pub sample_sha: Option<String>,
+    pub github_login: Option<String>,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchPeople {
+    pub creator: Option<PersonEvidence>,
+    pub contributors: Vec<PersonEvidence>,
+    pub scope: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -58,6 +79,7 @@ pub struct ProjectSnapshot {
     pub id: String,
     pub path: String,
     pub base_branch: String,
+    pub current_git_email: Option<String>,
     pub common_dir: String,
     pub branch_count: usize,
     pub branches: Vec<BranchSnapshot>,
@@ -79,6 +101,233 @@ fn git(cwd: &Path, args: &[&str]) -> Result<Vec<u8>, String> {
 
 fn git_text(cwd: &Path, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&git(cwd, args)?).trim().to_string())
+}
+
+fn github_repo_from_origin(origin: &str) -> Option<(String, String)> {
+    let path = origin
+        .trim()
+        .strip_prefix("git@github.com:")
+        .or_else(|| origin.trim().strip_prefix("https://github.com/"))?;
+    let path = path
+        .trim_end_matches('/')
+        .strip_suffix(".git")
+        .unwrap_or(path.trim_end_matches('/'));
+    let (owner, repo) = path.split_once('/')?;
+    let valid = |part: &str| {
+        !part.is_empty()
+            && part
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    };
+    if !valid(owner) || !valid(repo) {
+        return None;
+    }
+    Some((owner.into(), repo.into()))
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GithubAvatar {
+    pub login: String,
+    pub avatar_url: String,
+}
+
+pub fn resolve_github_avatars(
+    config: &ProjectConfig,
+    samples: &[String],
+) -> Result<HashMap<String, GithubAvatar>, String> {
+    let cwd = Path::new(&config.path);
+    if git_text(
+        cwd,
+        &["rev-parse", "--path-format=absolute", "--git-common-dir"],
+    )? != config.id
+    {
+        return Err("项目仓库已变化，请刷新后重试".into());
+    }
+    let origin = match git_text(cwd, &["remote", "get-url", "origin"]) {
+        Ok(value) => value,
+        Err(_) => return Ok(HashMap::new()),
+    };
+    let Some((owner, repo)) = github_repo_from_origin(&origin) else {
+        return Ok(HashMap::new());
+    };
+    let samples = samples
+        .iter()
+        .filter(|sha| sha.len() == 40 && sha.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .take(500)
+        .collect::<Vec<_>>();
+    let mut avatars = HashMap::new();
+    for chunk in samples.chunks(40) {
+        let fields = chunk.iter().enumerate().map(|(index, sha)| format!("c{index}:object(oid:\"{sha}\"){{... on Commit{{author{{user{{login avatarUrl}}}}}}}}"))
+            .collect::<Vec<_>>().join(" ");
+        let query = format!("query($owner:String!,$repo:String!){{repository(owner:$owner,name:$repo){{{fields}}}}}");
+        let output = Command::new("gh")
+            .args([
+                "api",
+                "graphql",
+                "-f",
+                &format!("query={query}"),
+                "-F",
+                &format!("owner={owner}"),
+                "-F",
+                &format!("repo={repo}"),
+            ])
+            .current_dir(cwd)
+            .env("GH_PROMPT_DISABLED", "1")
+            .output();
+        let Ok(output) = output else { break };
+        if !output.status.success() {
+            break;
+        }
+        let Ok(value) = serde_json::from_slice::<serde_json::Value>(&output.stdout) else {
+            break;
+        };
+        let Some(repository) = value.get("data").and_then(|data| data.get("repository")) else {
+            break;
+        };
+        for (index, sha) in chunk.iter().enumerate() {
+            let Some(user) = repository
+                .get(format!("c{index}"))
+                .and_then(|object| object.get("author"))
+                .and_then(|author| author.get("user"))
+            else {
+                continue;
+            };
+            let (Some(login), Some(url)) = (
+                user.get("login").and_then(|item| item.as_str()),
+                user.get("avatarUrl").and_then(|item| item.as_str()),
+            ) else {
+                continue;
+            };
+            if url.starts_with("https://avatars.githubusercontent.com/") {
+                avatars.insert(
+                    (*sha).clone(),
+                    GithubAvatar {
+                        login: login.into(),
+                        avatar_url: url.into(),
+                    },
+                );
+            }
+        }
+    }
+    Ok(avatars)
+}
+
+fn github_login_from_email(email: &str) -> Option<String> {
+    let local = email.to_ascii_lowercase();
+    let local = local.strip_suffix("@users.noreply.github.com")?;
+    let login = local.rsplit_once('+').map_or(local, |(_, login)| login);
+    if login.is_empty()
+        || login.len() > 39
+        || !login
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+    {
+        return None;
+    }
+    Some(login.to_string())
+}
+
+fn person(name: &str, email: &str, sample_sha: Option<String>) -> PersonEvidence {
+    let github_login = github_login_from_email(email);
+    let avatar_url = github_login
+        .as_ref()
+        .map(|login| format!("https://github.com/{login}.png?size=64"));
+    PersonEvidence {
+        name: name.into(),
+        email: email.into(),
+        commits: 0,
+        sample_sha,
+        github_login,
+        avatar_url,
+    }
+}
+
+fn is_local_branch_creation(message: &str) -> bool {
+    let Some(source) = message.strip_prefix("branch: Created from ") else {
+        return false;
+    };
+    !source.starts_with("origin/")
+        && !source.starts_with("refs/remotes/")
+        && !source.starts_with("remotes/origin/")
+}
+
+fn branch_people(cwd: &Path, branch: &str, base: &str) -> BranchPeople {
+    let branch_ref = format!("refs/heads/{branch}");
+    let creation = git_text(
+        cwd,
+        &[
+            "reflog",
+            "show",
+            "--format=%H%x00%gs%x00%gN%x00%gE",
+            &branch_ref,
+        ],
+    )
+    .ok()
+    .and_then(|raw| {
+        raw.lines().find_map(|line| {
+            let mut fields = line.splitn(4, '\0');
+            let start = fields.next()?;
+            let message = fields.next()?;
+            let name = fields.next()?;
+            let email = fields.next()?;
+            is_local_branch_creation(message)
+                .then(|| (start.to_string(), person(name, email, None)))
+        })
+    });
+    let (range, initial_scope) = if branch == base {
+        (branch_ref.clone(), "recent")
+    } else if let Some((start, _)) = &creation {
+        (format!("{start}..{branch_ref}"), "sinceCreation")
+    } else {
+        (format!("refs/heads/{base}..{branch_ref}"), "unique")
+    };
+    let initial = git_text(cwd, &["log", "-201", "--format=%H%x00%aN%x00%aE", &range]);
+    let recent_fallback =
+        initial.as_ref().map_or(true, |raw| raw.is_empty()) && branch != base && creation.is_none();
+    let output = if recent_fallback {
+        git_text(
+            cwd,
+            &["log", "-31", "--format=%H%x00%aN%x00%aE", &branch_ref],
+        )
+    } else {
+        initial
+    };
+    let mut contributors = Vec::<PersonEvidence>::new();
+    let mut count = 0;
+    if let Ok(raw) = output {
+        for line in raw.lines() {
+            let mut fields = line.splitn(3, '\0');
+            let (Some(sha), Some(name), Some(email)) =
+                (fields.next(), fields.next(), fields.next())
+            else {
+                continue;
+            };
+            count += 1;
+            if count > 200 {
+                break;
+            }
+            if let Some(existing) = contributors
+                .iter_mut()
+                .find(|item| item.email.eq_ignore_ascii_case(email))
+            {
+                existing.commits += 1;
+            } else {
+                let mut author = person(name, email, Some(sha.to_string()));
+                author.commits = 1;
+                contributors.push(author);
+            }
+        }
+    }
+    BranchPeople {
+        creator: creation.map(|(_, creator)| creator),
+        contributors,
+        scope: if count > 200 || recent_fallback {
+            "recent".into()
+        } else {
+            initial_scope.into()
+        },
+    }
 }
 
 fn dirty_counts(cwd: &Path) -> Result<DirtyCounts, String> {
@@ -275,6 +524,7 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                 .iter()
                 .find(|tree| tree.branch.as_deref() == Some(name.as_str()))
                 .map(|tree| tree.path.clone());
+            let people = branch_people(cwd, &name, &config.base_branch);
             Some(BranchSnapshot {
                 is_base: name == config.base_branch,
                 merged_into_base: merged
@@ -285,6 +535,7 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                 latest_commit_at,
                 latest_commit_subject,
                 worktree_path,
+                people,
             })
         })
         .collect();
@@ -296,6 +547,9 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
         id: config.id.clone(),
         path: config.path.clone(),
         base_branch: config.base_branch.clone(),
+        current_git_email: git_text(cwd, &["config", "user.email"])
+            .ok()
+            .filter(|email| !email.is_empty()),
         common_dir,
         branch_count: branches.lines().count(),
         branches: branch_snapshots,
@@ -470,6 +724,91 @@ mod tests {
         assert_eq!(comparison.behind, 0);
         assert_eq!(comparison.unique_commits.len(), 1);
         assert_eq!(comparison.unique_commits[0].subject, "feature change");
+    }
+
+    #[test]
+    fn branch_people_separate_creator_from_own_commit_authors() {
+        let repo = Repository::new();
+        repo.git(&["switch", "-c", "feature"]);
+        fs::write(repo.root.join("tracked.txt"), "alice\n").unwrap();
+        repo.git(&[
+            "-c",
+            "user.name=Alice",
+            "-c",
+            "user.email=alice@example.test",
+            "commit",
+            "-am",
+            "Alice change",
+        ]);
+        fs::write(repo.root.join("tracked.txt"), "bob\n").unwrap();
+        repo.git(&[
+            "-c",
+            "user.name=Bob",
+            "-c",
+            "user.email=bob@example.test",
+            "commit",
+            "-am",
+            "Bob change",
+        ]);
+        let snapshot = scan_project(&repo.config()).unwrap();
+        assert_eq!(
+            snapshot.current_git_email.as_deref(),
+            Some("fixture@example.test")
+        );
+        let people = &snapshot
+            .branches
+            .iter()
+            .find(|branch| branch.name == "feature")
+            .unwrap()
+            .people;
+        assert_eq!(
+            people.creator.as_ref().map(|person| person.name.as_str()),
+            Some("Fixture")
+        );
+        assert_eq!(people.scope, "sinceCreation");
+        assert_eq!(
+            people
+                .contributors
+                .iter()
+                .map(|person| person.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Bob", "Alice"]
+        );
+        assert_eq!(
+            people
+                .contributors
+                .iter()
+                .map(|person| person.commits)
+                .collect::<Vec<_>>(),
+            vec![1, 1]
+        );
+    }
+
+    #[test]
+    fn github_origin_parser_accepts_only_repository_urls() {
+        assert_eq!(
+            github_repo_from_origin("git@github.com:tellyn-ai/tellyn.git"),
+            Some(("tellyn-ai".into(), "tellyn".into()))
+        );
+        assert_eq!(
+            github_repo_from_origin("https://github.com/horisony/vibe-branch-merge-panel.git"),
+            Some(("horisony".into(), "vibe-branch-merge-panel".into()))
+        );
+        assert_eq!(
+            github_repo_from_origin("https://example.com/other/repo.git"),
+            None
+        );
+    }
+
+    #[test]
+    fn remote_tracking_checkout_is_not_treated_as_branch_creator() {
+        assert!(is_local_branch_creation("branch: Created from base"));
+        assert!(!is_local_branch_creation(
+            "branch: Created from origin/feature"
+        ));
+        assert!(!is_local_branch_creation(
+            "branch: Created from refs/remotes/origin/feature"
+        ));
     }
 
     #[test]

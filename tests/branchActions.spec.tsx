@@ -7,6 +7,7 @@ const branch: BranchSnapshot = {
   name: 'feature', head: 'a'.repeat(40), latestCommitAt: 100,
   latestCommitSubject: 'change', mergedIntoBase: false, isBase: false,
   worktreePath: '/repo/feature',
+  people: { creator: null, contributors: [], scope: 'unique' },
 };
 const project: ProjectStatus = {
   config: { id: 'repo', path: '/repo', baseBranch: 'main' },
