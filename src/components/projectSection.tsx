@@ -2,8 +2,8 @@ import { useState } from 'react';
 import type { DeploymentEvidence, ProjectStatus } from '../statusTypes';
 import { hasChanges, hasWorktreeRisk } from '../statusTypes';
 import { BranchRow } from './branchRow';
+import { BranchEvidence } from './branchEvidence';
 import { DeploymentPanel } from './deploymentPanel';
-import { WorktreeRow } from './worktreeRow';
 
 export const ProjectSection = ({ project, query, filter, showMerged, showAllBranches, expanded, nowSeconds }: {
   project: ProjectStatus;
@@ -33,7 +33,7 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
     <p className="projectMeta">{project.git?.branchCount ?? '?'} 个本地分支 · {project.git?.worktrees.length ?? '?'} 个工作目录 · 基线 {project.config.baseBranch}</p>
     {project.error && <p className="error">{project.error}</p>}
     {branches?.map((branch) => <BranchRow key={branch.name} branch={branch} project={project} deployments={deployments} nowSeconds={nowSeconds} />)}
-    {detached?.map((worktree) => <article className="branchRow" key={worktree.path}><div className="branchHeading"><h3>分离 HEAD</h3><span className="statusPill prominent">请确认工作分支</span></div><p className="commitLine"><code>{worktree.head.slice(0, 8)}</code> · {worktree.path}</p><div className="branchDetails"><WorktreeRow worktree={worktree} project={project} /></div></article>)}
+    {detached?.map((worktree) => <article className="branchRow" key={worktree.path}><div className="branchHeading"><h3>分离 HEAD</h3></div><p className="commitLine"><code>{worktree.head.slice(0, 8)}</code> · {worktree.path}</p><BranchEvidence name="分离 HEAD" worktree={worktree} project={project} /></article>)}
     {branches?.length === 0 && detached?.length === 0 && <p className="empty">没有符合条件的分支。</p>}
     <DeploymentPanel path={path} onEvidence={setDeployments} autoCheck={expanded && project.config.baseBranch === 'PA-home-page'} />
   </section>;
