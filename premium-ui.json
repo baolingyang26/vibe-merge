@@ -1,0 +1,9 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["src"],
+  "locale": "zh-CN",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar"],
+  "ownership": {
+    "Select/Listbox": "native"
+  }
+}

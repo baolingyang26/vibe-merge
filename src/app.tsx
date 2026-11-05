@@ -173,7 +173,7 @@ export const App = () => {
       <div className="listOptions"><label><input type="checkbox" checked={showAllBranches} onChange={(event) => setShowAllBranches(event.currentTarget.checked)} /> 显示未检出的本地分支</label>
         <label><input type="checkbox" checked={showMerged} onChange={(event) => setShowMerged(event.currentTarget.checked)} /> 显示已并入本地基线的分支</label></div>
       {snapshot?.projects.map((project, index) => <div role="tabpanel" id={`project-panel-${index}`} aria-labelledby={`project-tab-${index}`} hidden={selectedProjectId !== project.config.id} key={project.config.id}><ProjectSection project={project} query={query} filter={filter} showMerged={showMerged} showAllBranches={showAllBranches} expanded={expanded && selectedProjectId === project.config.id}
-        nowSeconds={nowSeconds} /></div>)}
+        nowSeconds={nowSeconds} onRefresh={handleRefresh} /></div>)}
       {snapshot?.projects.length === 0 && !addingProject && <p className="empty">点击项目栏右侧的 ＋ 添加项目。</p>}
       </>}
     </main>

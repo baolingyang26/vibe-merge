@@ -37,3 +37,9 @@ export const getDockSummary = (snapshot: StatusSnapshot | null, nowSeconds: numb
   }, { risk: 0, coding: 0, merged: 0 });
 };
 export interface DeploymentEvidence { environment: string; service: string; status: 'verified' | 'mismatch' | 'unknown'; runtimeSha: string | null; deploymentSha: string | null; deploymentUrl: string | null; runtimeSource: string; reason: string | null; observedAt: number }
+export interface ChangedFile { path: string; previousPath: string | null; status: string }
+export interface CommitPreview { headSha: string; branch: string; statusToken: string; files: ChangedFile[] }
+export interface CommitPushResult { commitSha: string; pushed: boolean; pushError: string | null }
+export interface PrSummary { number: number; url: string; baseRefName: string }
+export interface PrPreview { repository: string; headSha: string; branch: string; targets: string[]; needsPush: boolean; existing: PrSummary[] }
+export interface PrResult { url: string; existing: boolean; pushed: boolean }

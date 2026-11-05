@@ -2,7 +2,7 @@
 
 独立的 macOS 代码工作台，使用 Tauri v2 + React。源码、依赖、Git 历史和构建产物均在本仓库，不再依赖 Tellyn monorepo。
 
-右侧窄条常驻，显示风险、正在编写和已合并数量；悬停展开，离开收起，可固定展开。项目通过横向标签切换，分支按最新提交时间排序。每个分支展示提交、未提交改动、Codex 会话、合并和部署证据，PR 与 CI 在详情中查询。
+右侧窄条常驻，显示风险、正在编写和已合并数量；悬停展开，离开收起，可固定展开。项目通过横向标签切换，分支按最新提交时间排序。每个分支展示提交、未提交改动、Codex 会话、合并和部署证据，PR 与 CI 在详情中查询。活动分支有轻微动态提示；停止更新后，可在卡片内检查文件并提交推送，或选择目标分支创建 PR。
 
 ## 开发
 
@@ -29,9 +29,9 @@ macOS 应用位于 `src-tauri/target/release/bundle/macos/Global Work Status.app
 
 - 点击项目标签右侧的 ＋ 添加任意本地 Git 仓库。Tellyn 仓库默认比较基线为 `PA-home-page`。
 - Codex 会话需要安装并信任本地钩子，见 [codexSetup.md](codexSetup.md)。已有全局钩子不受源码搬迁影响，无需重复安装。
-- PR 与 CI 使用本机 `gh` 登录态。Tellyn 的部署核对使用既有只读 SSH 与 GitHub Deployment 记录；证据缺失显示“未核实”。
+- PR 与 CI 使用本机 `gh` 登录态；创建 PR 还需要 `origin` 远端和该仓库的推送权限。Tellyn 的部署核对使用既有只读 SSH 与 GitHub Deployment 记录；证据缺失显示“未核实”。
 - 应用标识仍为 `com.repo.globalworkstatus`，继续使用原有应用数据目录和已添加项目；事件日志仍为 `~/.codex/globalWorkStatus/events.jsonl`。
-- 应用不会自动提交、合并或部署代码。
+- 应用只会在用户检查文件并点击“提交并推送”，或选择目标分支并点击“创建 PR”后执行对应操作；不会自动合并或部署代码。基线分支不能从卡片中直接提交推送。
 
 ## 仓库迁移
 

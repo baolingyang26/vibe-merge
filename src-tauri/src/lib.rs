@@ -3,6 +3,7 @@ mod deployment;
 mod git;
 mod github;
 mod sessions;
+mod workflow;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -309,6 +310,89 @@ async fn load_github_evidence(
 }
 
 #[tauri::command]
+async fn prepare_commit(
+    app: tauri::AppHandle,
+    path: String,
+    branch: String,
+    head_sha: String,
+) -> Result<workflow::CommitPreview, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        workflow::prepare_commit(app, path, branch, head_sha)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn commit_and_push(
+    app: tauri::AppHandle,
+    path: String,
+    branch: String,
+    head_sha: String,
+    expected_status_token: String,
+    selected_paths: Vec<String>,
+    message: String,
+) -> Result<workflow::CommitPushResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        workflow::commit_and_push(
+            app,
+            path,
+            branch,
+            head_sha,
+            expected_status_token,
+            selected_paths,
+            message,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn push_branch(
+    app: tauri::AppHandle,
+    path: String,
+    branch: String,
+    head_sha: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || workflow::push_branch(app, path, branch, head_sha))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn prepare_pr(
+    app: tauri::AppHandle,
+    project_id: String,
+    branch: String,
+    head_sha: String,
+) -> Result<workflow::PrPreview, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        workflow::prepare_pr(app, project_id, branch, head_sha)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn create_pr(
+    app: tauri::AppHandle,
+    project_id: String,
+    branch: String,
+    head_sha: String,
+    base: String,
+    title: String,
+    body: String,
+    draft: bool,
+) -> Result<workflow::PrResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        workflow::create_pr(app, project_id, branch, head_sha, base, title, body, draft)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 async fn load_deployment_evidence(
     app: tauri::AppHandle,
     path: String,
@@ -492,6 +576,11 @@ pub fn run() {
             remove_project,
             scan_status,
             load_github_evidence,
+            prepare_commit,
+            commit_and_push,
+            push_branch,
+            prepare_pr,
+            create_pr,
             load_deployment_evidence,
             set_dock_expanded,
             open_chat,
