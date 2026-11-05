@@ -384,6 +384,35 @@ async fn create_pr(
 }
 
 #[tauri::command]
+async fn delete_branch(
+    app: tauri::AppHandle,
+    project_id: String,
+    branch: String,
+    head_sha: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        workflow::delete_branch(app, project_id, branch, head_sha)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn analyze_branch(
+    app: tauri::AppHandle,
+    project_id: String,
+    branch: String,
+    head_sha: String,
+    target: String,
+) -> Result<workflow::BranchAdvice, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        workflow::analyze_branch(app, project_id, branch, head_sha, target)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 async fn load_deployment_evidence(
     app: tauri::AppHandle,
     path: String,
@@ -572,6 +601,8 @@ pub fn run() {
             push_branch,
             prepare_pr,
             create_pr,
+            delete_branch,
+            analyze_branch,
             load_deployment_evidence,
             set_dock_expanded,
             open_chat,
