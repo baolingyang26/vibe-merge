@@ -42,12 +42,25 @@ pub struct WorktreeSnapshot {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct BranchSnapshot {
+    pub name: String,
+    pub head: String,
+    pub latest_commit_at: Option<u64>,
+    pub latest_commit_subject: String,
+    pub merged_into_base: Option<bool>,
+    pub is_base: bool,
+    pub worktree_path: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectSnapshot {
     pub id: String,
     pub path: String,
     pub base_branch: String,
     pub common_dir: String,
     pub branch_count: usize,
+    pub branches: Vec<BranchSnapshot>,
     pub worktrees: Vec<WorktreeSnapshot>,
     pub observed_at: u64,
 }
@@ -231,6 +244,50 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
             scan_error,
         });
     }
+    let base_ref = format!("refs/heads/{}", config.base_branch);
+    let merged = git_text(
+        cwd,
+        &[
+            "for-each-ref",
+            "--format=%(refname:short)",
+            &format!("--merged={base_ref}"),
+            "refs/heads/",
+        ],
+    )
+    .ok();
+    let metadata = git_text(
+        cwd,
+        &[
+            "for-each-ref",
+            "--format=%(refname:short)%00%(objectname)%00%(committerdate:unix)%00%(subject)",
+            "refs/heads/",
+        ],
+    )?;
+    let branch_snapshots = metadata
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.splitn(4, '\0');
+            let name = fields.next()?.to_string();
+            let head = fields.next()?.to_string();
+            let latest_commit_at = fields.next()?.parse().ok();
+            let latest_commit_subject = fields.next()?.to_string();
+            let worktree_path = worktrees
+                .iter()
+                .find(|tree| tree.branch.as_deref() == Some(name.as_str()))
+                .map(|tree| tree.path.clone());
+            Some(BranchSnapshot {
+                is_base: name == config.base_branch,
+                merged_into_base: merged
+                    .as_ref()
+                    .map(|names| names.lines().any(|candidate| candidate == name)),
+                name,
+                head,
+                latest_commit_at,
+                latest_commit_subject,
+                worktree_path,
+            })
+        })
+        .collect();
     let observed_at = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| error.to_string())?
@@ -241,6 +298,7 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
         base_branch: config.base_branch.clone(),
         common_dir,
         branch_count: branches.lines().count(),
+        branches: branch_snapshots,
         worktrees,
         observed_at,
     })
@@ -320,6 +378,47 @@ mod tests {
             .iter()
             .find(|candidate| fs::canonicalize(&candidate.path).ok().as_ref() == Some(&expected))
             .expect("worktree is present")
+    }
+
+    #[test]
+    fn includes_unchecked_branches_and_preserves_unknown_merge_state() {
+        let repo = Repository::new();
+        repo.git(&["branch", "inactive"]);
+        repo.git(&["switch", "-c", "feature"]);
+        fs::write(repo.root.join("tracked.txt"), "feature\n").unwrap();
+        repo.git(&["commit", "-am", "feature addition"]);
+        let snapshot = scan_project(&repo.config()).unwrap();
+        let inactive = snapshot
+            .branches
+            .iter()
+            .find(|branch| branch.name == "inactive")
+            .unwrap();
+        assert_eq!(inactive.merged_into_base, Some(true));
+        assert!(inactive.worktree_path.is_none());
+        assert!(inactive.latest_commit_at.is_some());
+        let feature = snapshot
+            .branches
+            .iter()
+            .find(|branch| branch.name == "feature")
+            .unwrap();
+        assert_eq!(feature.merged_into_base, Some(false));
+        assert_eq!(feature.latest_commit_subject, "feature addition");
+        assert!(feature.worktree_path.is_some());
+        assert!(
+            snapshot
+                .branches
+                .iter()
+                .find(|branch| branch.name == "base")
+                .unwrap()
+                .is_base
+        );
+        let mut config = repo.config();
+        config.base_branch = "missing".into();
+        assert!(scan_project(&config)
+            .unwrap()
+            .branches
+            .iter()
+            .all(|branch| branch.merged_into_base.is_none()));
     }
 
     #[test]

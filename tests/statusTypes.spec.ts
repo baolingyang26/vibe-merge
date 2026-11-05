@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { isActiveDevelopment, type SessionEvidence, type WorktreeSnapshot } from "../src/statusTypes";
+import { getDockSummary, isActiveDevelopment, type ProjectStatus, type SessionEvidence, type WorktreeSnapshot } from "../src/statusTypes";
 
 const worktree: WorktreeSnapshot = {
   path: "/repo/worktree",
@@ -21,4 +21,23 @@ test("active development needs both a live Codex session and recent changed file
   expect(isActiveDevelopment(worktree, sessions, 500)).toBe(false);
   expect(isActiveDevelopment(worktree, { ...sessions, sessions: [] }, 120)).toBe(false);
   expect(isActiveDevelopment({ ...worktree, dirty: { ...worktree.dirty, lastChangedAt: null } }, sessions, 120)).toBe(false);
+});
+
+test("dock counts risks, active coding branches and merged non-base branches separately", () => {
+  const project: ProjectStatus = {
+    config: { id: "repo", path: "/repo/worktree", baseBranch: "main" },
+    git: {
+      id: "repo", path: "/repo/worktree", baseBranch: "main", commonDir: "/repo/.git", branchCount: 3, observedAt: 120,
+      worktrees: [worktree],
+      branches: [
+        { name: "main", head: "b".repeat(40), latestCommitAt: 90, latestCommitSubject: "base", mergedIntoBase: true, isBase: true, worktreePath: null },
+        { name: "feature", head: worktree.head, latestCommitAt: 100, latestCommitSubject: "feature", mergedIntoBase: false, isBase: false, worktreePath: worktree.path },
+        { name: "old", head: "c".repeat(40), latestCommitAt: 80, latestCommitSubject: "old", mergedIntoBase: true, isBase: false, worktreePath: null },
+      ],
+    },
+    error: null,
+    sessions: [{ worktreePath: worktree.path, evidence: sessions, error: null }],
+  };
+  expect(getDockSummary({ projects: [project], observedAt: 120 }, 120)).toEqual({ risk: 1, coding: 1, merged: 1 });
+  expect(getDockSummary(null, 120)).toEqual({ risk: null, coding: null, merged: null });
 });

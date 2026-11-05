@@ -175,6 +175,43 @@ fn update_tray(app: &tauri::AppHandle, snapshot: &StatusSnapshot) {
     }
 }
 
+fn dock_geometry(
+    work_x: i32,
+    work_y: i32,
+    work_width: u32,
+    work_height: u32,
+    scale: f64,
+    expanded: bool,
+) -> (tauri::PhysicalSize<u32>, tauri::PhysicalPosition<i32>) {
+    let logical_width = if expanded { 460.0 } else { 78.0 };
+    let width = ((logical_width * scale).round() as u32).min(work_width);
+    (
+        tauri::PhysicalSize::new(width, work_height),
+        tauri::PhysicalPosition::new(work_x + work_width as i32 - width as i32, work_y),
+    )
+}
+
+fn position_dock(window: &tauri::WebviewWindow, expanded: bool) -> Result<(), String> {
+    let monitor = window
+        .current_monitor()
+        .map_err(|error| error.to_string())?
+        .ok_or("No monitor available for the dock")?;
+    let area = monitor.work_area();
+    let (size, position) = dock_geometry(
+        area.position.x,
+        area.position.y,
+        area.size.width,
+        area.size.height,
+        monitor.scale_factor(),
+        expanded,
+    );
+    window.set_size(size).map_err(|error| error.to_string())?;
+    window
+        .set_position(position)
+        .map_err(|error| error.to_string())?;
+    window.show().map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 fn list_projects(app: tauri::AppHandle) -> Result<Vec<config::ProjectConfig>, String> {
     config::load_projects(&app.path().app_data_dir().map_err(|e| e.to_string())?)
@@ -286,14 +323,12 @@ async fn load_deployment_evidence(
 }
 
 #[tauri::command]
-fn set_panel_pinned(app: tauri::AppHandle, pinned: bool) -> Result<bool, String> {
+fn set_dock_expanded(app: tauri::AppHandle, expanded: bool) -> Result<bool, String> {
     let window = app
         .get_webview_window("main")
-        .ok_or("Panel window is unavailable")?;
-    window
-        .set_always_on_top(pinned)
-        .map_err(|error| error.to_string())?;
-    Ok(pinned)
+        .ok_or("Dock window is unavailable")?;
+    position_dock(&window, expanded)?;
+    Ok(expanded)
 }
 
 #[tauri::command]
@@ -334,14 +369,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                if let (Ok(Some(monitor)), Ok(size)) =
-                    (window.current_monitor(), window.outer_size())
-                {
-                    let x =
-                        monitor.position().x + monitor.size().width as i32 - size.width as i32 - 20;
-                    let y = monitor.position().y + 54;
-                    let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
-                }
+                position_dock(&window, false)?;
             }
             let open_item = MenuItem::with_id(app, "open", "打开面板", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
@@ -392,7 +420,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                let _ = window.hide();
+                let _ = window.set_focus();
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -402,7 +430,7 @@ pub fn run() {
             scan_status,
             load_github_evidence,
             load_deployment_evidence,
-            set_panel_pinned,
+            set_dock_expanded,
             open_chat,
             open_worktree
         ])
@@ -445,5 +473,17 @@ mod tests {
         assert!(output.status.success());
         assert!(selected_worktree(&[], root.to_str().unwrap()).is_err());
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn dock_stays_right_aligned_at_retina_scale() {
+        let (collapsed, collapsed_position) = dock_geometry(100, 40, 3000, 1800, 2.0, false);
+        let (expanded, expanded_position) = dock_geometry(100, 40, 3000, 1800, 2.0, true);
+        assert_eq!(collapsed.width, 156);
+        assert_eq!(expanded.width, 920);
+        assert_eq!(collapsed_position.x + collapsed.width as i32, 3100);
+        assert_eq!(expanded_position.x + expanded.width as i32, 3100);
+        assert_eq!(collapsed_position.y, 40);
+        assert_eq!(expanded.height, 1800);
     }
 }

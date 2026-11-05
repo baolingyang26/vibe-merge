@@ -2,8 +2,7 @@
 
 Verified against [official Codex hooks documentation](https://learn.chatgpt.com/docs/hooks) on 2026-11-05. Command handlers receive JSON on stdin with `session_id`, `cwd`, and `hook_event_name`. Hooks are loaded from `~/.codex/hooks.json` or a trusted repo's `.codex/hooks.json`. Existing hooks are additive: merge entries without replacing existing configuration. Review and trust the hook through Codex's hook trust UI; restart/start a new session after installation.
 
-1. Copy `hooks/codexEvents.py` to a stable absolute path, e.g. `~/.codex/hooks/codexEvents.py`.
-2. Add the following object to your hooks configuration, replacing `/ABSOLUTE/PATH` with that actual path. Install in only one config layer to avoid duplicates.
+Run `python3 apps/globalWorkStatus/hooks/installCodexHook.py` from the repository root to copy the hook to `~/.codex/hooks/codexEvents.py` and append handlers to the existing `~/.codex/hooks.json`. The installer keeps existing hooks, writes a timestamped backup, and is safe to run again. Then review and trust the hook in Codex and start a new chat. To install manually, use the equivalent configuration below; install in only one config layer to avoid duplicates.
 
 ```json
 {
@@ -19,7 +18,7 @@ Verified against [official Codex hooks documentation](https://learn.chatgpt.com/
 }
 ```
 
-Use shell quoting around the script path if it contains spaces. Nothing is installed automatically. Remove these handlers to disable. Delete the log to erase stored metadata.
+Use shell quoting around the script path if it contains spaces. The app does not install hooks automatically. Remove these handlers to disable. Delete the log to erase stored metadata.
 
 The script writes only session ID, canonical cwd, event type and local Unix seconds to `~/.codex/globalWorkStatus/events.jsonl` (override with `GLOBAL_WORK_STATUS_EVENTS` in both hook and scanner configuration). It never opens transcripts or saves prompts, tool input/output or source code. Concurrent writers use an exclusive file lock; new directory/file modes are 0700/0600. Hook input failures are ignored without affecting Codex.
 

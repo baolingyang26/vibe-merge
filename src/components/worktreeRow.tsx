@@ -23,7 +23,7 @@ export const WorktreeRow = ({ worktree, project }: { worktree: WorktreeSnapshot;
     try { setGithub(await invoke<GithubEvidence>('load_github_evidence', { path: worktree.path, branch: worktree.branch, headSha: worktree.head, targetBase: project.config.baseBranch })); }
     catch (error) { setError(String(error)); } finally { setBusy(false); }
   };
-  return <article className="worktree"><details><summary><span className="branch">{worktree.branch ?? '分离 HEAD'}</span><code>{worktree.head.slice(0, 8)}</code><span className="rowHint">展开依据</span></summary>
+  return <article className="worktree"><details><summary><span className="branch">更多证据</span><span className="rowHint">展开</span></summary>
     <p className="path">{worktree.path}</p><button onClick={handleOpenDirectory}>打开目录</button>
     <div className="dimensions"><span>暂存 <b>{worktree.scanError ? '?' : worktree.dirty.staged}</b></span><span>未暂存 <b>{worktree.scanError ? '?' : worktree.dirty.unstaged}</b></span><span>未跟踪 <b>{worktree.scanError ? '?' : worktree.dirty.untracked}</b></span></div>
     <p>提交 · {worktree.comparison ? `领先 ${worktree.comparison.ahead} / 落后 ${worktree.comparison.behind}` : '无法确认'} · 本地基线 {project.config.baseBranch}</p>
@@ -39,5 +39,6 @@ export const WorktreeRow = ({ worktree, project }: { worktree: WorktreeSnapshot;
     {github?.status === 'observed' && github.checks.map((check, index) => <p key={`${check.name}/${index}`}>{check.url ? <a href={check.url} rel="noreferrer" target="_blank">{check.name}</a> : check.name} · {checkLabels[check.state]} · {check.source}</p>)}
     {github && <small>GitHub 取证：{evidenceTime(github.observedAt)} · {github.headSha.slice(0, 8)}</small>}
     {[worktree.scanError, worktree.comparisonError, session?.error, error].filter(Boolean).map((message) => <p className="error" key={message}>{message}</p>)}
-  </details><div className="quickStatus"><span>改动 {worktree.scanError ? '无法确认' : worktree.dirty.staged + worktree.dirty.unstaged + worktree.dirty.untracked}</span><span>独有提交 {worktree.comparison?.ahead ?? '?'}</span></div></article>;
+    <div className="quickStatus"><span>改动 {worktree.scanError ? '无法确认' : worktree.dirty.staged + worktree.dirty.unstaged + worktree.dirty.untracked}</span><span>独有提交 {worktree.comparison?.ahead ?? '?'}</span></div>
+  </details></article>;
 };
