@@ -1,3 +1,81 @@
-:root{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;color:#253644;background:#edf1f4;font-size:13px;--line:#ced8df;--accent:#245e80;scrollbar-color:#8196a4 #edf1f4;scrollbar-width:thin}*{box-sizing:border-box}body{margin:0}main{max-width:620px;margin:auto;padding:24px 20px;min-width:280px}header,.projectHeading,summary,.quickStatus{display:flex;align-items:center;gap:12px}header,.projectHeading{justify-content:space-between}.eyebrow{font:10px ui-monospace,monospace;letter-spacing:.13em;color:#547082}h1{font-size:25px;letter-spacing:-.04em;margin:6px 0}h2{font-size:15px;margin:0}.intro,.timestamp,small,footer{color:#536c7c}.intro{margin:8px 0 24px}button,input{font:inherit;border:1px solid var(--line);border-radius:6px;padding:8px 10px}button{cursor:pointer;background:#fff;color:#245e80;white-space:nowrap}button:hover{background:#e0eaf0}button:active{background:#cbdce6}button:disabled{cursor:default;opacity:.5}button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #3c89b3;outline-offset:2px}input{width:100%;background:#fff;color:inherit;min-width:0}label{display:block;font-size:11px;color:#536c7c;margin:8px 0}.search{display:flex;gap:6px}.filters{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0}.filters button{font-size:11px;padding:6px 8px}.filters button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:white}.project{border-top:2px solid #93abb9;padding:16px 0;margin-top:20px}.projectHeading button{font-size:11px;padding:5px 8px}.path{font:11px ui-monospace,monospace;overflow-wrap:anywhere;color:#536c7c;line-height:1.6}.worktree{background:#fff;border:1px solid var(--line);border-left:3px solid #5c8299;border-radius:7px;margin-top:12px;padding:12px}summary{cursor:pointer;flex-wrap:wrap;min-height:28px}summary:hover{color:var(--accent)}.branch{font-weight:650;overflow-wrap:anywhere}.rowHint{font-size:10px;color:#536c7c;margin-left:auto}code{font:11px ui-monospace,monospace}.dimensions,.quickStatus{display:flex;flex-wrap:wrap;gap:8px;font-size:11px}.dimensions span{background:#edf1f4;padding:6px;border-radius:4px}.quickStatus{border-top:1px solid #e2e8ec;margin-top:8px;padding-top:10px;color:#536c7c}.error,.warning{padding:10px;border-left:3px solid #a56b18;background:#fff2da;color:#74470a;overflow-wrap:anywhere}.empty{padding:18px 0;color:#536c7c}.addProject{border-top:1px solid var(--line);padding:16px 0}.addProject form{display:grid;gap:4px}.addProject button{margin-top:12px}footer{font-size:10px;margin-top:16px}a{color:var(--accent)}::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#8196a4;border-radius:6px}::-webkit-scrollbar-track{background:#edf1f4}@media(forced-colors:active){*{scrollbar-color:auto}}@media(max-width:350px){main{padding:16px 12px}}
-input[type=checkbox]{width:auto;vertical-align:middle}
-.deploymentPanel{margin-top:12px;border:1px solid var(--line);padding:12px;border-radius:7px}.deploymentItem{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);overflow-wrap:anywhere}.deploymentItem p{margin:7px 0}
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  font-size: 13px;
+  color: #1d1d1f;
+  background: #f5f5f7;
+  color-scheme: light dark;
+  --surface: #fff;
+  --surface-subtle: #fafafa;
+  --text: #1d1d1f;
+  --secondary: #6e6e73;
+  --line: #e5e5e8;
+  --control: #f0f0f2;
+  --control-hover: #e7e7ea;
+  --focus: #6e6e73;
+  scrollbar-color: #c7c7cc transparent;
+  scrollbar-width: thin;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 620px; min-width: 280px; margin: auto; padding: 20px; }
+header, .projectHeading, summary, .quickStatus { display: flex; align-items: center; gap: 10px; }
+header, .projectHeading { justify-content: space-between; }
+header { padding: 2px 0 16px; border-bottom: 1px solid var(--line); }
+h1 { margin: 0 auto 0 0; font-size: 20px; font-weight: 650; letter-spacing: -.025em; }
+h2 { margin: 0; font-size: 14px; font-weight: 650; }
+p { line-height: 1.5; }
+.timestamp, small, footer, .path, .rowHint { color: var(--secondary); }
+.timestamp { margin: 14px 0 2px; font-size: 11px; }
+button, input { font: inherit; }
+button { padding: 7px 10px; border: 1px solid transparent; border-radius: 8px; background: var(--control); color: var(--text); cursor: pointer; white-space: nowrap; }
+button:hover { background: var(--control-hover); }
+button:active { background: var(--line); }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+input:not([type='checkbox']) { width: 100%; min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); }
+input[type='checkbox'] { width: auto; margin-right: 5px; vertical-align: middle; accent-color: #55555a; }
+label { display: block; margin: 10px 0 6px; color: var(--secondary); font-size: 11px; }
+.toolbar { margin-top: 16px; }
+.search { display: flex; gap: 6px; }
+.filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 11px 0 14px; }
+.filters button { padding: 6px 9px; font-size: 11px; background: transparent; color: var(--secondary); }
+.filters button:hover { background: var(--control); }
+.filters button[aria-pressed='true'] { background: var(--control); color: var(--text); font-weight: 600; }
+.project { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.projectHeading button { padding: 5px 8px; color: var(--secondary); font-size: 11px; background: transparent; }
+.projectHeading button:hover { background: var(--control); color: var(--text); }
+.project > small { display: block; margin-top: 5px; }
+.path { margin: 8px 0; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.worktree, .deploymentPanel { margin-top: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.worktree details > summary { min-height: 22px; }
+summary { cursor: pointer; flex-wrap: wrap; }
+summary:hover { color: var(--text); }
+.branch { font-weight: 650; overflow-wrap: anywhere; }
+.rowHint { margin-left: auto; font-size: 10px; }
+.dimensions, .quickStatus { display: flex; flex-wrap: wrap; gap: 7px; font-size: 11px; }
+.dimensions span { padding: 6px 8px; border-radius: 7px; background: var(--surface-subtle); }
+.quickStatus { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--secondary); }
+.quickStatus span + span::before { content: '·'; margin-right: 7px; }
+.error, .warning { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-subtle); color: var(--text); overflow-wrap: anywhere; }
+.error::before { content: '无法确认 · '; font-weight: 650; }
+.warning::before { content: '注意 · '; font-weight: 650; }
+.empty { padding: 16px 0; color: var(--secondary); }
+.addProject { margin-top: 22px; padding: 17px 0; border-top: 1px solid var(--line); }
+.addProject form { display: grid; gap: 4px; }
+.addProject button { margin-top: 10px; }
+.deploymentItem { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.deploymentItem p { margin: 7px 0; }
+footer { margin-top: 12px; font-size: 10px; }
+a { color: var(--text); text-decoration-color: #a0a0a5; text-underline-offset: 2px; }
+a:hover { text-decoration-color: currentColor; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { border-radius: 6px; background: #c7c7cc; }
+::-webkit-scrollbar-track { background: transparent; }
+@media (prefers-color-scheme: dark) {
+  :root { color: #f5f5f7; background: #1c1c1e; --surface: #2c2c2e; --surface-subtle: #333336; --text: #f5f5f7; --secondary: #aeaeb2; --line: #454548; --control: #3a3a3c; --control-hover: #4a4a4c; --focus: #c7c7cc; }
+  input[type='checkbox'] { accent-color: #c7c7cc; }
+  a { text-decoration-color: #8e8e93; }
+}
+@media (forced-colors: active) { * { scrollbar-color: auto; } }
+@media (max-width: 350px) { main { padding: 16px 12px; } header { gap: 5px; } header button { padding: 6px; } }
