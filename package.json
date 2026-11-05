@@ -1,0 +1,30 @@
+{
+  "name": "@repo/global-work-status",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 9440 --strictPort",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "lint": "oxlint src",
+    "check-types": "tsc --noEmit",
+    "quality": "bun run check-types && bun run build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.5.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "5.9.2",
+    "vite": "^6.3.5"
+  }
+}
