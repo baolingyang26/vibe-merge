@@ -323,12 +323,60 @@ async fn load_deployment_evidence(
 }
 
 #[tauri::command]
-fn set_dock_expanded(app: tauri::AppHandle, expanded: bool) -> Result<bool, String> {
+async fn set_dock_expanded(
+    app: tauri::AppHandle,
+    expanded: bool,
+    reduced_motion: bool,
+) -> Result<bool, String> {
     let window = app
         .get_webview_window("main")
         .ok_or("Dock window is unavailable")?;
-    position_dock(&window, expanded)?;
-    Ok(expanded)
+    tauri::async_runtime::spawn_blocking(move || {
+        if reduced_motion {
+            position_dock(&window, expanded)?;
+            return Ok(expanded);
+        }
+        let monitor = window
+            .current_monitor()
+            .map_err(|error| error.to_string())?
+            .ok_or("No monitor available for the dock")?;
+        let area = monitor.work_area();
+        let (target, _) = dock_geometry(
+            area.position.x,
+            area.position.y,
+            area.size.width,
+            area.size.height,
+            monitor.scale_factor(),
+            expanded,
+        );
+        let start_width = window
+            .inner_size()
+            .map_err(|error| error.to_string())?
+            .width;
+        let started = std::time::Instant::now();
+        loop {
+            let progress = (started.elapsed().as_secs_f64() / 0.24).min(1.0);
+            let eased = 1.0 - (1.0 - progress).powi(3);
+            let width = (start_width as f64 + (target.width as f64 - start_width as f64) * eased)
+                .round() as u32;
+            window
+                .set_size(tauri::PhysicalSize::new(width, target.height))
+                .map_err(|error| error.to_string())?;
+            window
+                .set_position(tauri::PhysicalPosition::new(
+                    area.position.x + area.size.width as i32 - width as i32,
+                    area.position.y,
+                ))
+                .map_err(|error| error.to_string())?;
+            if progress >= 1.0 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(16));
+        }
+        Ok(expanded)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

@@ -4,6 +4,7 @@ import { ProjectSection } from './components/projectSection';
 import { PanelIcon } from './components/panelIcon';
 import type { ProjectConfig, StatusSnapshot } from './statusTypes';
 import { getDockSummary } from './statusTypes';
+import tellynLogo from './assets/tellynLogo.svg';
 
 export const App = () => {
   const [snapshot, setSnapshot] = useState<StatusSnapshot | null>(null);
@@ -36,11 +37,12 @@ export const App = () => {
     try {
       while (expandedRef.current !== requestedRef.current) {
         const target = requestedRef.current;
-        await invoke<boolean>('set_dock_expanded', { expanded: target });
-        expandedRef.current = target;
         setExpanded(target);
+        await invoke<boolean>('set_dock_expanded', { expanded: target, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches });
+        expandedRef.current = target;
       }
     } catch (cause) {
+      setExpanded(expandedRef.current);
       setError(`无法调整侧栏：${String(cause)}`);
     } finally {
       switchingRef.current = false;
@@ -85,14 +87,15 @@ export const App = () => {
   return <div className={`dock ${expanded ? 'isExpanded' : 'isCollapsed'}`}
     onMouseEnter={() => { void requestExpansion(true); }}
     onMouseLeave={() => { if (!lockedOpen) void requestExpansion(false); }}>
-    {!expanded && <button className="rail" aria-label={`展开代码工作台。风险目录 ${summary.risk ?? '未知'}，正在编写 ${summary.coding ?? '未知'}，已并入本地基线 ${summary.merged ?? '未知'}`} onClick={() => { void requestExpansion(true); }} onFocus={() => { void requestExpansion(true); }}>
+    <button className="rail" aria-hidden={expanded} tabIndex={expanded ? -1 : 0} aria-label={`展开代码工作台。风险目录 ${summary.risk ?? '未知'}，正在编写 ${summary.coding ?? '未知'}，已并入本地基线 ${summary.merged ?? '未知'}`} onClick={() => { void requestExpansion(true); }} onFocus={() => { void requestExpansion(true); }}>
       <span className="railHandle" aria-hidden="true">‹</span>
       <span className="railMetric" title="未提交或扫描异常的工作目录"><strong>{summary.risk ?? '–'}</strong><small>风险</small></span>
       <span className="railMetric" title="活动 Codex 会话与近期文件改动同时存在"><strong>{summary.coding ?? '–'}</strong><small>编写</small></span>
       <span className="railMetric" title="已并入本地基线的分支"><strong>{summary.merged ?? '–'}</strong><small>已合并</small></span>
-    </button>}
-    <main hidden={!expanded}>
+    </button>
+    <main inert={!expanded} aria-hidden={!expanded}>
       <header className="topbar">
+        <img className="brandLogo" src={tellynLogo} alt="Tellyn" width="28" height="28" />
         <div className="search"><PanelIcon name="search" /><input id="search" ref={searchRef} aria-label="搜索分支或路径" placeholder="搜索分支或路径" value={query} onChange={(event) => setQuery(event.currentTarget.value)} />
           {query && <button className="iconButton" aria-label="清空搜索" title="清空搜索" onClick={() => { setQuery(''); searchRef.current?.focus(); }}><PanelIcon name="close" /></button>}</div>
         <button className="iconButton" aria-label={lockedOpen ? '取消固定' : '固定展开'} title={lockedOpen ? '取消固定' : '固定展开'} aria-pressed={lockedOpen} onClick={() => setLockedOpen((value) => !value)}><PanelIcon name="pin" /></button>

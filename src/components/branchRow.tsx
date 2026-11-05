@@ -1,6 +1,7 @@
 import type { BranchSnapshot, DeploymentEvidence, ProjectStatus } from '../statusTypes';
 import { evidenceTime, hasChanges, isActiveDevelopment, relativeTime } from '../statusTypes';
 import { WorktreeRow } from './worktreeRow';
+import { PanelIcon } from './panelIcon';
 
 export const BranchRow = ({ branch, project, deployments, nowSeconds }: {
   branch: BranchSnapshot;
@@ -17,7 +18,7 @@ export const BranchRow = ({ branch, project, deployments, nowSeconds }: {
     ? `已部署 ${running.map((item) => `${item.environment}/${item.service}`).join('、')}`
     : deployments.some((item) => item.status === 'verified') ? '当前提交未运行' : '部署未核实';
   return <article className="branchRow">
-    <div className="branchHeading"><h3>{branch.name}</h3>{coding && <span className="statusPill prominent">正在写代码</span>}</div>
+    <div className="branchHeading"><span className="branchSymbol"><PanelIcon name="branch" /></span><h3>{branch.name}</h3>{coding && <span className="statusPill prominent">正在写代码</span>}</div>
     <p className="commitLine" title={branch.latestCommitAt === null ? undefined : evidenceTime(branch.latestCommitAt)}>
       <code>{branch.head.slice(0, 8)}</code> · 最近提交 {relativeTime(branch.latestCommitAt, nowSeconds)}
     </p>
