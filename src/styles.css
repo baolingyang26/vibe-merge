@@ -20,14 +20,15 @@
 body { margin: 0; overflow: hidden; }
 .dock { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--canvas); }
 .dock.isCollapsed, .dock.isExpanded { border-left: 1px solid var(--line); }
-.rail { position: absolute; inset: 0 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 23px; width: 78px; height: 100%; padding: 8px 4px; border-radius: 0; background: var(--surface); transition: opacity 140ms ease; }
+.dock.isCollapsed { border-radius: 16px 0 0 16px; box-shadow: -6px 4px 18px #00000010; }
+.rail { position: absolute; inset: 0 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; width: 72px; height: 100%; padding: 10px 4px; border-radius: 16px 0 0 16px; background: var(--surface); transition: opacity 250ms ease; }
 .isExpanded .rail { opacity: 0; pointer-events: none; }
 .rail:hover { background: var(--surface-subtle); }
-.railHandle { color: var(--secondary); font-size: 22px; line-height: 1; }
-.railMetric { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 55px; }
-.railMetric strong { font-size: 23px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
-.railMetric small { font-size: 10px; font-weight: 500; }
-main { position: absolute; top: 0; right: 0; width: 460px; height: 100%; margin: 0; padding: 20px; overflow-y: auto; overscroll-behavior: contain; opacity: 0; visibility: hidden; transform: translateX(14px); transition: opacity 180ms ease, transform 240ms cubic-bezier(.22,1,.36,1), visibility 0s 240ms; }
+.railHandle { color: var(--secondary); font-size: 16px; line-height: 1; }
+.railMetric { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px; }
+.railMetric strong { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
+.railMetric small { font-size: 9px; font-weight: 500; }
+main { position: absolute; top: 0; right: 0; width: 460px; height: 100%; margin: 0; padding: 20px; overflow-y: auto; overscroll-behavior: contain; opacity: 0; visibility: hidden; transform: translateX(14px); transition: opacity 260ms ease, transform 340ms cubic-bezier(.22,.61,.36,1), visibility 0s 340ms; }
 .isExpanded main { opacity: 1; visibility: visible; transform: translateX(0); transition-delay: 0s; }
 .brandLogo { display: block; width: 28px; height: 28px; flex: none; object-fit: contain; }
 header, .projectHeading, summary, .quickStatus { display: flex; align-items: center; gap: 10px; }

@@ -27,6 +27,8 @@ export const App = () => {
   const expandedRef = useRef(false);
   const requestedRef = useRef(false);
   const switchingRef = useRef(false);
+  const collapseTimerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); }, []);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const summary = getDockSummary(snapshot, nowSeconds);
   const selectedProjectId = addingProject && activeProjectId === 'new-project' ? 'new-project'
@@ -103,8 +105,13 @@ export const App = () => {
   };
 
   return <div className={`dock ${expanded ? 'isExpanded' : 'isCollapsed'}`}
-    onMouseEnter={() => { void requestExpansion(true); }}
-    onMouseLeave={() => { if (!lockedOpen) void requestExpansion(false); }}>
+    onMouseEnter={() => { if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); collapseTimerRef.current = null; void requestExpansion(true); }}
+    onMouseLeave={(event) => {
+      if (lockedOpen) return;
+      if (event.clientX > 0 && event.clientX < window.innerWidth && event.clientY > 0 && event.clientY < window.innerHeight) return;
+      if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = window.setTimeout(() => { collapseTimerRef.current = null; void requestExpansion(false); }, 140);
+    }}>
     <button className="rail" aria-hidden={expanded} tabIndex={expanded ? -1 : 0} aria-label={`展开代码工作台。风险目录 ${summary.risk ?? '未知'}，正在编写 ${summary.coding ?? '未知'}，已并入本地基线 ${summary.merged ?? '未知'}`} onClick={() => { void requestExpansion(true); }} onFocus={() => { void requestExpansion(true); }}>
       <span className="railHandle" aria-hidden="true">‹</span>
       <span className="railMetric" title="未提交或扫描异常的工作目录"><strong>{summary.risk ?? '–'}</strong><small>风险</small></span>
@@ -116,7 +123,7 @@ export const App = () => {
         <img className="brandLogo" src={tellynLogo} alt="Tellyn" width="28" height="28" />
         <div className="search"><PanelIcon name="search" /><input id="search" ref={searchRef} aria-label="搜索分支或路径" placeholder="搜索分支或路径" value={query} onChange={(event) => setQuery(event.currentTarget.value)} />
           {query && <button className="iconButton" aria-label="清空搜索" title="清空搜索" onClick={() => { setQuery(''); searchRef.current?.focus(); }}><PanelIcon name="close" /></button>}</div>
-        <button className="iconButton" aria-label={lockedOpen ? '取消固定' : '固定展开'} title={lockedOpen ? '取消固定' : '固定展开'} aria-pressed={lockedOpen} onClick={() => setLockedOpen((value) => !value)}><PanelIcon name="pin" /></button>
+        <button className="iconButton" aria-label={lockedOpen ? '取消固定' : '固定展开'} title={lockedOpen ? '取消固定' : '固定展开'} aria-pressed={lockedOpen} onClick={() => { if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); collapseTimerRef.current = null; setLockedOpen((value) => !value); }}><PanelIcon name="pin" /></button>
         <button className={`iconButton ${busy ? 'isRefreshing' : ''}`} aria-label={busy ? '正在刷新' : '刷新'} title="刷新" disabled={busy} onClick={() => void handleRefresh()}><PanelIcon name="refresh" /></button>
       </header>
       <div className="projectTabBar"><div className="projectTabs" role="tablist" aria-label="项目">

@@ -13,12 +13,12 @@
     "windows": [
       {
         "title": "Global Work Status",
-        "width": 78,
-        "height": 780,
+        "width": 72,
+        "height": 180,
         "resizable": false,
         "decorations": false,
         "fullscreen": false,
-        "minWidth": 78,
+        "minWidth": 72,
         "visible": true,
         "alwaysOnTop": true,
         "visibleOnAllWorkspaces": true
