@@ -15,8 +15,8 @@ export const App = () => {
   const [baseBranch, setBaseBranch] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [showMerged, setShowMerged] = useState(false);
-  const [showAllBranches, setShowAllBranches] = useState(false);
+  const [showMerged, setShowMerged] = useState(true);
+  const [showAllBranches, setShowAllBranches] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [addingProject, setAddingProject] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);

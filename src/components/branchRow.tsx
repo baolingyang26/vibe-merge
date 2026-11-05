@@ -23,7 +23,7 @@ export const BranchRow = ({ branch, project, deployments, nowSeconds }: {
     </p>
     <p className="commitSubject">{branch.latestCommitSubject || '提交内容未知'}</p>
     <div className="branchStatuses">
-      <span className="statusPill">{branch.mergedIntoBase === true ? '已并入本地基线' : branch.mergedIntoBase === false ? '未并入' : '合并未核实'}</span>
+      <span className="statusPill">{branch.isBase ? '基线分支' : branch.mergedIntoBase === true ? '已并入本地基线' : branch.mergedIntoBase === false ? '未并入' : '合并未核实'}</span>
       <span className="statusPill">{deploymentLabel}</span>
       {worktree && <span className="statusPill">{worktree.scanError ? '改动未核实' : hasChanges(worktree) ? `未提交 ${changeCount}` : '工作目录干净'}</span>}
       {!worktree && <span className="statusPill">未检出工作目录</span>}

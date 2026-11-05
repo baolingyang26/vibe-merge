@@ -18,7 +18,6 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
 }) => {
   const [deployments, setDeployments] = useState<DeploymentEvidence[]>([]);
   const branches = project.git?.branches.filter((branch) => {
-    if (branch.isBase) return false;
     if (!showAllBranches && !branch.worktreePath) return false;
     const worktree = project.git?.worktrees.find((item) => item.path === branch.worktreePath);
     const session = project.sessions.find((item) => item.worktreePath === branch.worktreePath);
@@ -29,17 +28,7 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
     if (filter === 'commits') return branch.mergedIntoBase === false;
     if (filter === 'active') return hasActiveSession;
     return true;
-  }).sort((left, right) => {
-    const score = (path: string | null) => {
-      const worktree = project.git?.worktrees.find((item) => item.path === path);
-      if (!worktree) return 0;
-      const session = project.sessions.find((item) => item.worktreePath === path);
-      if (session?.evidence?.sessions.some((item) => item.active) && hasChanges(worktree)) return 3;
-      return hasWorktreeRisk(project, worktree) ? 2 : 1;
-    };
-    const difference = score(right.worktreePath) - score(left.worktreePath);
-    return difference || (right.latestCommitAt ?? 0) - (left.latestCommitAt ?? 0);
-  });
+  }).sort((left, right) => (right.latestCommitAt ?? 0) - (left.latestCommitAt ?? 0) || left.name.localeCompare(right.name));
   const path = project.git?.worktrees.find((item) => !item.scanError)?.path ?? project.config.path;
   const detached = project.git?.worktrees.filter((item) => !item.branch && `${item.path} ${item.head}`.toLowerCase().includes(query.toLowerCase()));
   return <section className="project" aria-label={project.config.path}>
