@@ -86,9 +86,9 @@ code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .deploymentPanel { margin-top: 16px; padding: 18px; border: 0; border-radius: 19px; background: var(--surface); box-shadow: 0 2px 3px #00000002; }
 .deploymentPanel > summary { justify-content: space-between; min-height: 30px; list-style: none; color: var(--text); font-size: 13px; font-weight: 650; }
 .deploymentPanel > summary::-webkit-details-marker { display: none; }
-.deploymentPanel > summary::after { content: ''; width: 0; height: 0; border-right: 5px solid transparent; border-left: 5px solid transparent; border-top: 6px solid var(--secondary); transition: transform 180ms ease; }
+.deploymentPanel > summary > svg { flex: none; width: 16px; height: 16px; color: var(--secondary); transition: transform 180ms ease; }
 .deploymentPanel[open] > summary { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.deploymentPanel[open] > summary::after { transform: rotate(180deg); }
+.deploymentPanel[open] > summary > svg { transform: rotate(180deg); }
 .deploymentPanel > p:first-of-type { margin: 0 0 12px; color: var(--secondary); }
 .branchRow { position: relative; margin-top: 12px; padding: 18px; border: 0; border-radius: 19px; background: var(--surface); box-shadow: 0 2px 3px #00000002; }
 .branchHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 36px; }
@@ -130,8 +130,8 @@ code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .branchEvidence > summary { position: absolute; top: 18px; right: 18px; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; color: var(--secondary); list-style: none; }
 .branchEvidence > summary::-webkit-details-marker { display: none; }
 .branchEvidence > summary:hover { background: var(--control); }
-.evidenceTriangle { width: 0; height: 0; border-right: 5px solid transparent; border-left: 5px solid transparent; border-top: 6px solid currentColor; transition: transform 180ms ease; }
-.branchEvidence[open] .evidenceTriangle { transform: rotate(180deg); }
+.branchEvidence > summary > svg { width: 16px; height: 16px; transition: transform 180ms ease; }
+.branchEvidence[open] > summary > svg { transform: rotate(180deg); }
 .branchEvidence .worktree { margin-top: 16px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
 summary { cursor: pointer; flex-wrap: wrap; }
 summary:hover { color: var(--text); }
