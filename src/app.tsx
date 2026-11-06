@@ -29,6 +29,9 @@ export const App = () => {
   const requestedRef = useRef(false);
   const switchingRef = useRef(false);
   const collapseTimerRef = useRef<number | null>(null);
+  const swipeRef = useRef({ x: 0, y: 0, last: 0 });
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipeCollapsedRef = useRef(false);
   useEffect(() => () => { if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); }, []);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const summary = getDockSummary(snapshot, nowSeconds);
@@ -69,6 +72,16 @@ export const App = () => {
       switchingRef.current = false;
     }
   }, []);
+
+  const collapseFromSwipe = () => {
+    if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current);
+    collapseTimerRef.current = null;
+    swipeCollapsedRef.current = true;
+    setLockedOpen(false);
+    void requestExpansion(false);
+  };
+  const canSwipe = (target: EventTarget | null) =>
+    !(target instanceof Element && target.closest('.projectTabs, .branchPeople, input, textarea, select, [contenteditable="true"]'));
 
   useEffect(() => {
     let disposed = false;
@@ -117,12 +130,41 @@ export const App = () => {
   };
 
   return <div className={`dock ${expanded ? 'isExpanded' : 'isCollapsed'}`}
-    onMouseEnter={() => { if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); collapseTimerRef.current = null; void requestExpansion(true); }}
+    onMouseEnter={() => { if (swipeCollapsedRef.current) return; if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); collapseTimerRef.current = null; void requestExpansion(true); }}
     onMouseLeave={(event) => {
+      swipeCollapsedRef.current = false;
       if (lockedOpen) return;
       if (event.clientX > 0 && event.clientX < window.innerWidth && event.clientY > 0 && event.clientY < window.innerHeight) return;
       if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current);
       collapseTimerRef.current = window.setTimeout(() => { collapseTimerRef.current = null; void requestExpansion(false); }, 140);
+    }}
+    onWheel={(event) => {
+      if (!expanded || !canSwipe(event.target)) return;
+      const now = Date.now();
+      const swipe = swipeRef.current;
+      if (now - swipe.last > 300) { swipe.x = 0; swipe.y = 0; }
+      swipe.last = now;
+      const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerWidth : 1;
+      swipe.x += event.deltaX * scale;
+      swipe.y += event.deltaY * scale;
+      if (swipe.x < -80 && -swipe.x > Math.abs(swipe.y) * 1.5) {
+        swipe.x = 0; swipe.y = 0;
+        collapseFromSwipe();
+      }
+    }}
+    onTouchStart={(event) => {
+      const touch = event.touches.length === 1 ? event.touches.item(0) : null;
+      if (!expanded || !canSwipe(event.target) || !touch) { touchStartRef.current = null; return; }
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    }}
+    onTouchEnd={(event) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      const touch = event.changedTouches.length === 1 ? event.changedTouches.item(0) : null;
+      if (!expanded || !start || !touch) return;
+      const x = touch.clientX - start.x;
+      const y = touch.clientY - start.y;
+      if (x > 80 && x > Math.abs(y) * 1.5) collapseFromSwipe();
     }}>
     <button className="rail" aria-hidden={expanded} tabIndex={expanded ? -1 : 0} aria-label={`展开代码工作台。风险目录 ${summary.risk ?? '未知'}，正在编写 ${summary.coding ?? '未知'}，已并入本地基线 ${summary.merged ?? '未知'}`} onClick={() => { void requestExpansion(true); }} onFocus={() => { void requestExpansion(true); }}>
       <span className="railHandle" aria-hidden="true">‹</span>
