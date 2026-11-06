@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
 use tauri_plugin_opener::OpenerExt;
 
@@ -221,6 +221,14 @@ fn position_dock(window: &tauri::WebviewWindow, expanded: bool) -> Result<(), St
         .set_position(position)
         .map_err(|error| error.to_string())?;
     window.show().map_err(|error| error.to_string())
+}
+
+fn open_dock(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = position_dock(&window, true);
+        let _ = window.set_focus();
+        let _ = app.emit_to("main", "open-dock", ());
+    }
 }
 
 #[tauri::command]
@@ -569,12 +577,7 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "open" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
+                    "open" => open_dock(app),
                     "quit" => app.exit(0),
                     _ => {}
                 })
@@ -587,10 +590,7 @@ pub fn run() {
                             ..
                         }
                     ) {
-                        if let Some(window) = tray.app_handle().get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        open_dock(tray.app_handle());
                     }
                 })
                 .build(app)?;
@@ -631,8 +631,16 @@ pub fn run() {
             open_chat,
             open_worktree
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Vibe Merge");
+        .build(tauri::generate_context!())
+        .expect("error while building Vibe Merge")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                open_dock(app);
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
+        });
 }
 
 #[cfg(test)]

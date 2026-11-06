@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProjectSection } from './components/projectSection';
 import { PanelIcon } from './components/panelIcon';
@@ -68,6 +69,17 @@ export const App = () => {
       switchingRef.current = false;
     }
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen('open-dock', () => {
+      if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+      void requestExpansion(true);
+    }).then((stop) => { if (disposed) stop(); else unlisten = stop; });
+    return () => { disposed = true; unlisten?.(); };
+  }, [requestExpansion]);
 
   const handleRefresh = useCallback(async () => {
     if (refreshingRef.current) return;
