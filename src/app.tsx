@@ -167,7 +167,7 @@ export const App = () => {
       const y = touch.clientY - start.y;
       if (x > 80 && x > Math.abs(y) * 1.5) collapseFromSwipe();
     }}>
-    <button className="rail" aria-hidden={expanded} tabIndex={expanded ? -1 : 0} aria-label={`展开代码工作台。风险目录 ${summary.risk ?? '未知'}，正在编写 ${summary.coding ?? '未知'}，已并入本地基线 ${summary.merged ?? '未知'}`} onClick={() => { void requestExpansion(true); }} onFocus={() => { void requestExpansion(true); }}>
+    <button className="rail" tabIndex={expanded ? -1 : 0} aria-label={`${expanded ? '收起' : '展开'}代码工作台。风险目录 ${summary.risk ?? '未知'}，正在编写 ${summary.coding ?? '未知'}，已并入本地基线 ${summary.merged ?? '未知'}`} onClick={() => { void requestExpansion(!expanded); }} onFocus={() => { if (!expanded) void requestExpansion(true); }}>
       <span className="railHandle" aria-hidden="true">‹</span>
       <span className="railMetric" title="未提交或扫描异常的工作目录"><strong>{summary.risk ?? '–'}</strong><small>风险</small></span>
       <span className="railMetric" title="活动 Codex 会话与近期文件改动同时存在"><strong>{summary.coding ?? '–'}</strong><small>编写</small></span>
