@@ -56,7 +56,7 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
   const path = project.git?.worktrees.find((item) => !item.scanError)?.path ?? project.config.path;
   const detached = project.git?.worktrees.filter((item) => !item.branch && `${item.path} ${item.head}`.toLowerCase().includes(query.toLowerCase()));
   return <section className="project" aria-label={project.config.path}>
-    <p className="projectMeta">{project.git?.branchCount ?? '?'} 个本地分支 · {project.git?.worktrees.length ?? '?'} 个工作目录 · 基线 {project.config.baseBranch}</p>
+    <p className="projectMeta"><strong>{project.git?.branchCount ?? '?'}</strong> 个本地分支 <span className="metaDivider" aria-hidden="true">·</span> <strong>{project.git?.worktrees.length ?? '?'}</strong> 个工作目录 <span className="metaDivider" aria-hidden="true">·</span> 基线 <code>{project.config.baseBranch}</code></p>
     {project.error && <p className="error">{project.error}</p>}
     {branches?.map((branch) => <BranchRow key={branch.name} branch={branch} project={project} deployments={deployments} avatars={avatars} avatarsByEmail={avatarsByEmail} nowSeconds={nowSeconds} onRefresh={onRefresh} />)}
     {detached?.map((worktree) => <article className="branchRow" key={worktree.path}><div className="branchHeading"><h3>分离 HEAD</h3></div><p className="commitLine"><code>{worktree.head.slice(0, 8)}</code> · {worktree.path}</p><BranchEvidence name="分离 HEAD" worktree={worktree} project={project} /></article>)}
