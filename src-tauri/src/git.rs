@@ -49,6 +49,7 @@ pub struct BranchSnapshot {
     pub latest_commit_at: Option<u64>,
     pub latest_commit_subject: String,
     pub merged_into_base: Option<bool>,
+    pub merged_into_branches: Vec<String>,
     pub is_base: bool,
     pub worktree_path: Option<String>,
     pub people: BranchPeople,
@@ -529,11 +530,38 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                 .find(|tree| tree.branch.as_deref() == Some(name.as_str()))
                 .map(|tree| tree.path.clone());
             let people = branch_people(cwd, &name, &config.base_branch);
+            let untouched_local_branch = people.creator.is_some()
+                && people.scope == "sinceCreation"
+                && people.contributors.is_empty();
+            let merged_into_branches = if name == config.base_branch || untouched_local_branch {
+                Vec::new()
+            } else {
+                git_text(
+                    cwd,
+                    &[
+                        "for-each-ref",
+                        "--format=%(refname:short)%00%(objectname)",
+                        &format!("--contains={head}"),
+                        "refs/heads/",
+                    ],
+                )
+                .map(|output| {
+                    output
+                        .lines()
+                        .filter_map(|line| {
+                            let (candidate, candidate_head) = line.split_once('\0')?;
+                            (candidate != name && candidate_head != head).then(|| candidate.to_string())
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+            };
             Some(BranchSnapshot {
                 is_base: name == config.base_branch,
                 merged_into_base: merged
                     .as_ref()
                     .map(|names| names.lines().any(|candidate| candidate == name)),
+                merged_into_branches,
                 name,
                 head,
                 latest_commit_at,
@@ -652,6 +680,7 @@ mod tests {
             .find(|branch| branch.name == "inactive")
             .unwrap();
         assert_eq!(inactive.merged_into_base, Some(true));
+        assert!(inactive.merged_into_branches.is_empty());
         assert!(inactive.worktree_path.is_none());
         assert!(inactive.latest_commit_at.is_some());
         let feature = snapshot
@@ -677,6 +706,24 @@ mod tests {
             .branches
             .iter()
             .all(|branch| branch.merged_into_base.is_none()));
+    }
+
+    #[test]
+    fn reports_other_local_branches_containing_a_branch_tip() {
+        let repo = Repository::new();
+        repo.git(&["switch", "-c", "feature"]);
+        fs::write(repo.root.join("tracked.txt"), "feature\n").unwrap();
+        repo.git(&["commit", "-am", "feature work"]);
+        repo.git(&["switch", "-c", "integration"]);
+        fs::write(repo.root.join("tracked.txt"), "integration\n").unwrap();
+        repo.git(&["commit", "-am", "integration work"]);
+
+        let snapshot = scan_project(&repo.config()).unwrap();
+        let feature = snapshot.branches.iter().find(|branch| branch.name == "feature").unwrap();
+        assert_eq!(feature.merged_into_base, Some(false));
+        assert_eq!(feature.merged_into_branches, vec!["integration"]);
+        let integration = snapshot.branches.iter().find(|branch| branch.name == "integration").unwrap();
+        assert!(integration.merged_into_branches.is_empty());
     }
 
     #[test]

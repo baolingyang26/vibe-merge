@@ -53,8 +53,7 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh, an
   const canCommit = Boolean(worktree && worktree.dirty.staged + worktree.dirty.unstaged > 0 && !worktree.scanError && !branch.isBase && !coding);
   const canPr = !branch.isBase && branch.mergedIntoBase !== true && !dirty && !worktree?.scanError && !coding;
   const canDelete = !branch.isBase && branch.mergedIntoBase === true && !branch.worktreePath;
-  const mergeStatus = branch.mergedIntoBase === true ? `已并入 ${project.config.baseBranch}`
-    : branch.mergedIntoBase === false ? `未并入 ${project.config.baseBranch}` : `${project.config.baseBranch} 并入状态未核实`;
+  const mergeStatus = branch.mergedIntoBranches.length > 0 ? `已并入 ${branch.mergedIntoBranches.join('、')}` : '';
   const targetAdvice = useBranchAdvice(project.config.id, branch.name, branch.head, base, mode === 'pr' && Boolean(base));
   const existingPr = prPreview?.existing.find((pr) => pr.baseRefName === base);
   const prReady = canSubmitPr({ previewReady: Boolean(prPreview), base, title, existingPr: Boolean(existingPr), adviceStatus: targetAdvice.status, adviceVerdict: targetAdvice.advice?.verdict ?? null, proceedUnsuitable });
@@ -141,11 +140,11 @@ export const BranchActions = ({ branch, project, worktree, coding, onRefresh, an
     finally { setBusy(false); }
   };
 
-  if (branch.isBase && !analysisAction && !canCommit && !canPr && !canDelete && !commitResult && !prResult && mode === null) return null;
+  if (!mergeStatus && !analysisAction && !canCommit && !canPr && !canDelete && !commitResult && !prResult && mode === null) return null;
   return <div className="branchActions">
     {prResult && <div className="workflowResult prResult" role="status"><span>{prResult.existing ? '已有 PR' : '已创建 PR'}</span><a href={prResult.url} rel="noreferrer" target="_blank">打开 PR</a></div>}
-    {mode === null && (!branch.isBase || analysisAction || canCommit || canPr || canDelete) && <div className="branchActionButtons">
-      {!branch.isBase && <span className="mergeTargetStatus" title={mergeStatus}>{mergeStatus}</span>}
+    {mode === null && (mergeStatus || analysisAction || canCommit || canPr || canDelete) && <div className="branchActionButtons">
+      {mergeStatus && <span className="mergeTargetStatus" title={mergeStatus}>{mergeStatus}</span>}
       {analysisAction}
       {canCommit && <button type="button" disabled={busy} onClick={() => void handleOpenCommit()}>Commit / Push</button>}
       {canPr && <button type="button" disabled={busy} onClick={() => void handleOpenPr()}>创建 PR</button>}
