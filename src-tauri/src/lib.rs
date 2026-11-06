@@ -184,7 +184,8 @@ fn dock_geometry(
     scale: f64,
     expanded: bool,
 ) -> (tauri::PhysicalSize<u32>, tauri::PhysicalPosition<i32>) {
-    let logical_width = if expanded { 460.0 } else { 92.0 };
+    let logical_width = 460.0;
+    let visible_rail_width = ((92.0 * scale).round() as u32).min(work_width);
     let logical_height = if expanded {
         work_height
     } else {
@@ -194,7 +195,10 @@ fn dock_geometry(
     let top = work_y;
     (
         tauri::PhysicalSize::new(width, logical_height),
-        tauri::PhysicalPosition::new(work_x + work_width as i32 - width as i32, top),
+        tauri::PhysicalPosition::new(
+            work_x + work_width as i32 - if expanded { width } else { visible_rail_width } as i32,
+            top,
+        ),
     )
 }
 
@@ -466,13 +470,13 @@ async fn load_deployment_evidence(
 async fn set_dock_expanded(
     app: tauri::AppHandle,
     expanded: bool,
-    reduced_motion: bool,
+    animate: bool,
 ) -> Result<bool, String> {
     let window = app
         .get_webview_window("main")
         .ok_or("Dock window is unavailable")?;
     tauri::async_runtime::spawn_blocking(move || {
-        if reduced_motion {
+        if !animate {
             position_dock(&window, expanded)?;
             return Ok(expanded);
         }
@@ -489,34 +493,27 @@ async fn set_dock_expanded(
             monitor.scale_factor(),
             expanded,
         );
-        let start_size = window.inner_size().map_err(|error| error.to_string())?;
         let start_position = window.outer_position().map_err(|error| error.to_string())?;
+        if expanded {
+            window.set_size(target).map_err(|error| error.to_string())?;
+        }
         let started = std::time::Instant::now();
         loop {
-            let progress = (started.elapsed().as_secs_f64() / 0.34).min(1.0);
+            let progress = (started.elapsed().as_secs_f64() / 0.26).min(1.0);
             let eased = progress * progress * (3.0 - 2.0 * progress);
-            let width = (start_size.width as f64
-                + (target.width as f64 - start_size.width as f64) * eased)
-                .round() as u32;
-            let height = (start_size.height as f64
-                + (target.height as f64 - start_size.height as f64) * eased)
-                .round() as u32;
-            let top = (start_position.y as f64
-                + (target_position.y as f64 - start_position.y as f64) * eased)
+            let left = (start_position.x as f64
+                + (target_position.x as f64 - start_position.x as f64) * eased)
                 .round() as i32;
             window
-                .set_size(tauri::PhysicalSize::new(width, height))
-                .map_err(|error| error.to_string())?;
-            window
-                .set_position(tauri::PhysicalPosition::new(
-                    area.position.x + area.size.width as i32 - width as i32,
-                    top,
-                ))
+                .set_position(tauri::PhysicalPosition::new(left, target_position.y))
                 .map_err(|error| error.to_string())?;
             if progress >= 1.0 {
                 break;
             }
             std::thread::sleep(std::time::Duration::from_millis(16));
+        }
+        if !expanded {
+            window.set_size(target).map_err(|error| error.to_string())?;
         }
         Ok(expanded)
     })
@@ -677,13 +674,13 @@ mod tests {
     }
 
     #[test]
-    fn dock_stays_right_aligned_at_retina_scale() {
+    fn dock_slides_offscreen_without_resizing_its_width() {
         let (collapsed, collapsed_position) = dock_geometry(100, 40, 3000, 1800, 2.0, false);
         let (expanded, expanded_position) = dock_geometry(100, 40, 3000, 1800, 2.0, true);
-        assert_eq!(collapsed.width, 184);
+        assert_eq!(collapsed.width, 920);
         assert_eq!(collapsed.height, 424);
         assert_eq!(expanded.width, 920);
-        assert_eq!(collapsed_position.x + collapsed.width as i32, 3100);
+        assert_eq!(collapsed_position.x + 184, 3100);
         assert_eq!(expanded_position.x + expanded.width as i32, 3100);
         assert_eq!(collapsed_position.y, 40);
         assert_eq!(expanded.height, 1800);

@@ -61,9 +61,10 @@ export const App = () => {
     try {
       while (expandedRef.current !== requestedRef.current) {
         const target = requestedRef.current;
-        setExpanded(target);
-        await invoke<boolean>('set_dock_expanded', { expanded: target, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches });
+        if (target) setExpanded(true);
+        await invoke<boolean>('set_dock_expanded', { expanded: target, animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches });
         expandedRef.current = target;
+        setExpanded(target);
       }
     } catch (cause) {
       setExpanded(expandedRef.current);
