@@ -13,9 +13,9 @@ test('feature branch needs a local commit and merge but release handles deployme
   expect(getBranchProgress({ ...branch, mergedIntoBase: true, mergeProgress: { merged: 1, total: 1, equivalent: 0 } }, { ...worktree, dirty: { ...worktree.dirty, unstaged: 0 } }, [])[1].tone).toBe('done');
 });
 
-test('shows a visible commit fraction and percentage for partial integration', () => {
+test('shows a visible commit fraction for partial integration', () => {
   const stages = getBranchProgress({ ...branch, mergeProgress: { merged: 2, total: 5, equivalent: 1 } }, undefined, []);
-  expect(stages[1].value).toBe('2/5 · 40%');
+  expect(stages[1].value).toBe('2/5');
   expect(stages[1].tone).toBe('attention');
 });
 

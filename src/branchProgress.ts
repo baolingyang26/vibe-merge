@@ -12,7 +12,7 @@ export const getBranchProgress = (branch: BranchSnapshot, worktree: WorktreeSnap
   const merge: BranchStage = branch.isBase ? { name: '并入', detail: '当前基线', tone: 'delegated' }
     : !progress ? { name: '并入', detail: '提交并入状态未核实', tone: 'unknown' }
       : progress.total === 0 ? { name: '并入', detail: '没有可统计的代码提交', tone: 'delegated', value: '0/0' }
-        : { name: '并入', detail: `${progress.merged}/${progress.total} 个提交已进入本地基线${progress.equivalent ? `，其中 ${progress.equivalent} 个为等价补丁` : ''}`, tone: progress.merged === progress.total ? 'done' : 'attention', value: `${progress.merged}/${progress.total} · ${Math.round(progress.merged / progress.total * 100)}%` };
+        : { name: '并入', detail: `${progress.merged}/${progress.total} 个提交已进入本地基线${progress.equivalent ? `，其中 ${progress.equivalent} 个为等价补丁` : ''}`, tone: progress.merged === progress.total ? 'done' : 'attention', value: `${progress.merged}/${progress.total}` };
   const running = deployments.filter((item) => item.status === 'verified' && item.runtimeSha === branch.head);
   const deploy: BranchStage = running.length > 0
     ? { name: '部署', detail: `已运行 ${running.map((item) => `${item.environment}/${item.service}`).join('、')}`, tone: 'done' }
