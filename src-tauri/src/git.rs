@@ -271,8 +271,12 @@ fn branch_people(cwd: &Path, branch: &str, base: &str) -> BranchPeople {
             let message = fields.next()?;
             let name = fields.next()?;
             let email = fields.next()?;
-            is_local_branch_creation(message)
-                .then(|| (start.to_string(), person(name, email, None)))
+            message.strip_prefix("branch: Created from ").map(|_| {
+                (
+                    start.to_string(),
+                    is_local_branch_creation(message).then(|| person(name, email, None)),
+                )
+            })
         })
     });
     let (range, initial_scope) = if branch == base {
@@ -320,7 +324,7 @@ fn branch_people(cwd: &Path, branch: &str, base: &str) -> BranchPeople {
         }
     }
     BranchPeople {
-        creator: creation.map(|(_, creator)| creator),
+        creator: creation.and_then(|(_, creator)| creator),
         contributors,
         scope: if count > 200 || recent_fallback {
             "recent".into()
@@ -809,6 +813,31 @@ mod tests {
         assert!(!is_local_branch_creation(
             "branch: Created from refs/remotes/origin/feature"
         ));
+    }
+
+    #[test]
+    fn remote_tracking_branch_counts_only_commits_after_checkout() {
+        let repo = Repository::new();
+        repo.git(&["switch", "-c", "seed"]);
+        fs::write(repo.root.join("tracked.txt"), "older work\n").unwrap();
+        repo.git(&[
+            "-c", "user.name=Older", "-c", "user.email=older@example.test",
+            "commit", "-am", "older work",
+        ]);
+        repo.git(&["update-ref", "refs/remotes/origin/seed", "HEAD"]);
+        repo.git(&["switch", "base"]);
+        repo.git(&["switch", "-c", "feature", "origin/seed"]);
+        fs::write(repo.root.join("tracked.txt"), "new work\n").unwrap();
+        repo.git(&[
+            "-c", "user.name=Newer", "-c", "user.email=newer@example.test",
+            "commit", "-am", "new work",
+        ]);
+
+        let people = branch_people(&repo.root, "feature", "base");
+        assert!(people.creator.is_none());
+        assert_eq!(people.scope, "sinceCreation");
+        assert_eq!(people.contributors.len(), 1);
+        assert_eq!(people.contributors[0].name, "Newer");
     }
 
     #[test]

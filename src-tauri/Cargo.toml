@@ -1,5 +1,5 @@
 [package]
-name = "global-work-status"
+name = "vibe-merge"
 version = "0.0.1"
 description = "A Tauri App"
 authors = ["you"]

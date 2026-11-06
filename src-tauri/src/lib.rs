@@ -565,7 +565,7 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
             TrayIconBuilder::with_id("status")
                 .title("◉")
-                .tooltip("Global Work Status")
+                .tooltip("Vibe Merge")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -632,7 +632,7 @@ pub fn run() {
             open_worktree
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Global Work Status");
+        .expect("error while running Vibe Merge");
 }
 
 #[cfg(test)]
