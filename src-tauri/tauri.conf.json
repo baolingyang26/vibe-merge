@@ -17,6 +17,7 @@
         "height": 180,
         "resizable": false,
         "decorations": false,
+        "shadow": false,
         "fullscreen": false,
         "minWidth": 72,
         "visible": true,
