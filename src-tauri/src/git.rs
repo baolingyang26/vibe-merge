@@ -172,7 +172,7 @@ pub fn resolve_github_avatars(
         let fields = chunk.iter().enumerate().map(|(index, sha)| format!("c{index}:object(oid:\"{sha}\"){{... on Commit{{author{{user{{login avatarUrl}}}}}}}}"))
             .collect::<Vec<_>>().join(" ");
         let query = format!("query($owner:String!,$repo:String!){{repository(owner:$owner,name:$repo){{{fields}}}}}");
-        let output = Command::new("gh")
+        let output = Command::new(crate::github::resolve_executable("gh"))
             .args([
                 "api",
                 "graphql",

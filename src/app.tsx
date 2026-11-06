@@ -181,6 +181,11 @@ export const App = () => {
         <button className="iconButton" aria-label={lockedOpen ? '取消固定' : '固定展开'} title={lockedOpen ? '取消固定' : '固定展开'} aria-pressed={lockedOpen} onClick={() => { if (collapseTimerRef.current !== null) window.clearTimeout(collapseTimerRef.current); collapseTimerRef.current = null; setLockedOpen((value) => !value); }}><PanelIcon name="pin" /></button>
         <button className={`iconButton ${busy ? 'isRefreshing' : ''}`} aria-label={busy ? '正在刷新' : '刷新'} title="刷新" disabled={busy} onClick={() => void handleRefresh()}><PanelIcon name="refresh" /></button>
       </header>
+      <div className="dockMetrics" aria-label="工作区统计">
+        <span className="railMetric"><strong>{summary.risk ?? '–'}</strong><small>风险</small></span>
+        <span className="railMetric"><strong>{summary.coding ?? '–'}</strong><small>编写</small></span>
+        <span className="railMetric"><strong>{summary.merged ?? '–'}</strong><small>已合并</small></span>
+      </div>
       <div className="projectTabBar"><div className="projectTabs" role="tablist" aria-label="项目">
         {snapshot?.projects.map((project, index) => <button role="tab" id={`project-tab-${index}`} aria-selected={selectedProjectId === project.config.id} aria-controls={`project-panel-${index}`} tabIndex={selectedProjectId === project.config.id ? 0 : -1} key={project.config.id} title={`${project.config.path} · 右键可移出`} onClick={() => { setContextMenu(null); setActiveProjectId(project.config.id); }} onContextMenu={(event) => {
           event.preventDefault(); setActiveProjectId(project.config.id);

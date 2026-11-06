@@ -226,7 +226,8 @@ fn position_dock(window: &tauri::WebviewWindow, expanded: bool) -> Result<(), St
         let native_window = window.ns_window().map_err(|error| error.to_string())?;
         let native_window = unsafe { &*(native_window.cast::<NSWindow>()) };
         let behavior = native_window.collectionBehavior();
-        native_window.setCollectionBehavior(behavior | NSWindowCollectionBehavior::FullScreenAuxiliary);
+        native_window
+            .setCollectionBehavior(behavior | NSWindowCollectionBehavior::FullScreenAuxiliary);
     }
     window.show().map_err(|error| error.to_string())
 }

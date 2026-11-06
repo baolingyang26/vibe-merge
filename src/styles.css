@@ -24,16 +24,16 @@
 body { margin: 0; overflow: hidden; }
 .dock { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
 .rail { position: absolute; z-index: 2; top: 16px; left: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 72px; height: 180px; padding: 10px 4px; border-radius: 16px 0 0 16px; background: var(--surface); box-shadow: -5px 3px 14px #00000024; transition: opacity 150ms ease, visibility 0s 150ms; }
-.isExpanded .rail { top: 74px; right: 20px; left: 20px; flex-direction: row; justify-content: flex-end; gap: 10px; width: auto; height: 32px; padding: 0 8px; border-radius: 10px; background: transparent; box-shadow: none; }
+.isExpanded .rail { opacity: 0; visibility: hidden; pointer-events: none; }
 .rail:hover { background: var(--surface-subtle); }
 .railHandle { color: var(--secondary); font-size: 16px; line-height: 1; }
 .railMetric { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px; }
 .railMetric strong { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1; }
 .railMetric small { font-size: 11px; font-weight: 550; }
-.isExpanded .railHandle { display: none; }
-.isExpanded .railMetric { flex-direction: row; gap: 4px; min-width: 0; }
-.isExpanded .railMetric strong { font-size: 13px; }
-.isExpanded .projectTabBar { margin-top: 38px; }
+.dockMetrics { display: none; }
+.isExpanded .dockMetrics { display: flex; justify-content: flex-end; gap: 14px; margin: -6px 0 14px; }
+.dockMetrics .railMetric { flex-direction: row; gap: 4px; min-width: 0; }
+.dockMetrics .railMetric strong { font-size: 13px; }
 main { position: absolute; top: 0; left: 0; width: 460px; height: 100%; margin: 0; padding: 20px; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--line); background: var(--canvas); opacity: 0; visibility: hidden; transition: opacity 150ms ease, visibility 0s 150ms; }
 .isExpanded main { opacity: 1; visibility: visible; transition-delay: 60ms, 0s; }
 .brandLogo { display: block; width: 28px; height: 28px; flex: none; object-fit: contain; }

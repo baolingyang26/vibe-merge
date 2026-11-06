@@ -62,12 +62,42 @@ mod tests {
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
+    env,
     io::Read,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::{Mutex, OnceLock},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+
+pub(crate) fn resolve_executable(program: &str) -> PathBuf {
+    let requested = Path::new(program);
+    if requested.components().count() > 1 {
+        return requested.to_path_buf();
+    }
+
+    let mut search_paths = env::var_os("PATH")
+        .map(|paths| env::split_paths(&paths).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if let Some(home) = env::var_os("HOME") {
+        search_paths.extend([
+            PathBuf::from(&home).join(".local/bin"),
+            PathBuf::from(&home).join("bin"),
+        ]);
+    }
+    search_paths.extend([
+        PathBuf::from("/opt/homebrew/bin"),
+        PathBuf::from("/usr/local/bin"),
+        PathBuf::from("/opt/local/bin"),
+        PathBuf::from("/usr/bin"),
+        PathBuf::from("/bin"),
+    ]);
+    search_paths
+        .into_iter()
+        .map(|directory| directory.join(program))
+        .find(|candidate| candidate.is_file())
+        .unwrap_or_else(|| requested.to_path_buf())
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -215,7 +245,7 @@ fn parse_prs(raw: &str) -> Result<Vec<PullRequest>, serde_json::Error> {
 
 // Pipes are drained concurrently so a large response cannot deadlock the timeout.
 pub(crate) fn run(path: &Path, program: &str, args: &[&str]) -> Result<String, String> {
-    let mut child = Command::new(program)
+    let mut child = Command::new(resolve_executable(program))
         .args(args)
         .current_dir(path)
         .env("GH_PROMPT_DISABLED", "1")

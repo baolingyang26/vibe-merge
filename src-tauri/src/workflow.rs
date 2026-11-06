@@ -82,7 +82,7 @@ struct RepositoryIdentity {
 }
 
 fn run(path: &Path, program: &str, args: &[&str], timeout: Duration) -> Result<String, String> {
-    let mut command = Command::new(program);
+    let mut command = Command::new(crate::github::resolve_executable(program));
     command
         .args(args)
         .current_dir(path)
