@@ -13,12 +13,12 @@
     "windows": [
       {
         "title": "Vibe Merge",
-        "width": 72,
-        "height": 180,
+        "width": 92,
+        "height": 212,
         "resizable": false,
         "decorations": false,
         "transparent": true,
-        "shadow": true,
+        "shadow": false,
         "fullscreen": false,
         "minWidth": 72,
         "visible": true,

@@ -21,7 +21,7 @@
 body { margin: 0; overflow: hidden; }
 .dock { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--canvas); }
 .dock.isExpanded { border-left: 1px solid var(--line); }
-.dock.isCollapsed { border-radius: 16px 0 0 16px; }
+.dock.isCollapsed { width: calc(100vw - 20px); height: calc(100vh - 32px); margin: 16px 0 16px 20px; border-radius: 16px 0 0 16px; box-shadow: -5px 3px 14px #00000024; }
 .rail { position: absolute; inset: 0 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; width: 72px; height: 100%; padding: 10px 4px; border-radius: 16px 0 0 16px; background: var(--surface); transition: opacity 250ms ease; }
 .isExpanded .rail { opacity: 0; pointer-events: none; }
 .rail:hover { background: var(--surface-subtle); }
