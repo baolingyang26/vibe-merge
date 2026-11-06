@@ -220,6 +220,14 @@ fn position_dock(window: &tauri::WebviewWindow, expanded: bool) -> Result<(), St
     window
         .set_position(position)
         .map_err(|error| error.to_string())?;
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+        let native_window = window.ns_window().map_err(|error| error.to_string())?;
+        let native_window = unsafe { &*(native_window.cast::<NSWindow>()) };
+        let behavior = native_window.collectionBehavior();
+        native_window.setCollectionBehavior(behavior | NSWindowCollectionBehavior::FullScreenAuxiliary);
+    }
     window.show().map_err(|error| error.to_string())
 }
 
