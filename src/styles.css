@@ -110,6 +110,7 @@ code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .progressDot { position: relative; z-index: 1; width: 9px; height: 9px; border: 1.5px solid #aeb4bf; border-radius: 50%; background: var(--surface); }
 .progressStage.is-done .progressDot { border-color: var(--progress-complete); background: var(--progress-complete); }
 .progressName { color: var(--text); font-weight: 650; }
+.progressValue { color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .branchAdvice { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-subtle); color: var(--secondary); font-size: 11px; }
 .branchAdvice.isCompact { margin-top: 10px; }
 .branchAdvice.is-unsuitable { border-color: #d9b7b7; background: #fdf8f8; }

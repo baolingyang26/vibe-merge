@@ -3,7 +3,8 @@ export interface WorktreeSnapshot { path: string; branch: string | null; head: s
 export interface PersonEvidence { name: string; email: string; commits: number; sampleSha: string | null; githubLogin: string | null; avatarUrl: string | null }
 export interface BranchPeople { creator: PersonEvidence | null; contributors: PersonEvidence[]; scope: 'sinceCreation' | 'unique' | 'recent' }
 export interface GithubAvatar { login: string; avatarUrl: string }
-export interface BranchSnapshot { name: string; head: string; latestCommitAt: number | null; latestCommitSubject: string; mergedIntoBase: boolean | null; mergedIntoBranches: string[]; isBase: boolean; worktreePath: string | null; people: BranchPeople }
+export interface MergeProgress { merged: number; total: number; equivalent: number }
+export interface BranchSnapshot { name: string; head: string; latestCommitAt: number | null; latestCommitSubject: string; mergedIntoBase: boolean | null; mergedIntoBranches: string[]; mergeProgress: MergeProgress | null; isBase: boolean; worktreePath: string | null; people: BranchPeople }
 export interface SessionEvidence { sessions: { sessionId: string; cwd: string; lastSeen: number; active: boolean }[]; sharedWorktreeWarning: boolean; malformedLines: number }
 export interface ProjectStatus { config: ProjectConfig; git: { id: string; path: string; baseBranch: string; currentGitEmail: string | null; commonDir: string; branchCount: number; branches: BranchSnapshot[]; worktrees: WorktreeSnapshot[]; observedAt: number } | null; error: string | null; sessions: { worktreePath: string; evidence: SessionEvidence | null; error: string | null }[] }
 export interface StatusSnapshot { projects: ProjectStatus[]; observedAt: number }

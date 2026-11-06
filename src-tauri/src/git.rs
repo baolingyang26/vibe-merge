@@ -1,8 +1,9 @@
 use crate::config::ProjectConfig;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -50,9 +51,18 @@ pub struct BranchSnapshot {
     pub latest_commit_subject: String,
     pub merged_into_base: Option<bool>,
     pub merged_into_branches: Vec<String>,
+    pub merge_progress: Option<MergeProgress>,
     pub is_base: bool,
     pub worktree_path: Option<String>,
     pub people: BranchPeople,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeProgress {
+    pub merged: usize,
+    pub total: usize,
+    pub equivalent: usize,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -335,6 +345,124 @@ fn branch_people(cwd: &Path, branch: &str, base: &str) -> BranchPeople {
     }
 }
 
+struct MergeContext {
+    base_shas: HashSet<String>,
+    base_patches: HashSet<String>,
+    patches_by_sha: HashMap<String, String>,
+}
+
+fn patch_ids(cwd: &Path) -> Result<HashMap<String, String>, String> {
+    let mut log = Command::new("git")
+        .args(["log", "--branches", "--no-merges", "--format=%H", "-p"])
+        .current_dir(cwd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    let output = Command::new("git")
+        .args(["patch-id", "--stable"])
+        .current_dir(cwd)
+        .stdin(log.stdout.take().ok_or("cannot read git log")?)
+        .output()
+        .map_err(|error| error.to_string())?;
+    if !log.wait().map_err(|error| error.to_string())?.success() || !output.status.success() {
+        return Err("could not calculate commit patch IDs".into());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| {
+            let (patch, sha) = line.split_once(' ')?;
+            Some((sha.to_string(), patch.to_string()))
+        })
+        .collect())
+}
+
+fn build_merge_context(cwd: &Path, base: &str) -> Option<MergeContext> {
+    let base_ref = format!("refs/heads/{base}");
+    let base_shas: HashSet<String> = git_text(cwd, &["rev-list", "--no-merges", &base_ref])
+        .ok()?
+        .lines()
+        .map(str::to_string)
+        .collect();
+    let patches_by_sha = patch_ids(cwd).ok()?;
+    let base_patches = base_shas
+        .iter()
+        .filter_map(|sha| patches_by_sha.get(sha).cloned())
+        .collect();
+    Some(MergeContext {
+        base_shas,
+        base_patches,
+        patches_by_sha,
+    })
+}
+
+fn cached_merge_context(
+    cwd: &Path,
+    common_dir: &str,
+    base: &str,
+    metadata: &str,
+) -> Option<Arc<MergeContext>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, (String, Arc<MergeContext>)>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let key = format!("{common_dir}\0{base}");
+    if let Some((cached_metadata, context)) = cache.lock().ok()?.get(&key) {
+        if cached_metadata == metadata {
+            return Some(Arc::clone(context));
+        }
+    }
+    let context = Arc::new(build_merge_context(cwd, base)?);
+    cache
+        .lock()
+        .ok()?
+        .insert(key, (metadata.to_string(), Arc::clone(&context)));
+    Some(context)
+}
+
+fn branch_merge_progress(
+    cwd: &Path,
+    branch: &str,
+    base: &str,
+    context: &MergeContext,
+) -> Option<MergeProgress> {
+    let branch_ref = format!("refs/heads/{branch}");
+    let base_ref = format!("refs/heads/{base}");
+    let creation_start = git_text(cwd, &["reflog", "show", "--format=%H%x00%gs", &branch_ref])
+        .ok()
+        .and_then(|output| {
+            output.lines().find_map(|line| {
+                let (sha, message) = line.split_once('\0')?;
+                is_local_branch_creation(message).then(|| sha.to_string())
+            })
+        });
+    let start = creation_start
+        .filter(|sha| git(cwd, &["merge-base", "--is-ancestor", sha, &branch_ref]).is_ok())
+        .or_else(|| git_text(cwd, &["merge-base", &base_ref, &branch_ref]).ok())?;
+    let commits = git_text(
+        cwd,
+        &[
+            "rev-list",
+            "--first-parent",
+            "--no-merges",
+            &format!("{start}..{branch_ref}"),
+        ],
+    )
+    .ok()?;
+    let mut progress = MergeProgress::default();
+    for sha in commits.lines() {
+        let Some(patch) = context.patches_by_sha.get(sha) else {
+            continue;
+        };
+        progress.total += 1;
+        if context.base_shas.contains(sha) {
+            progress.merged += 1;
+        } else if context.base_patches.contains(patch) {
+            progress.merged += 1;
+            progress.equivalent += 1;
+        }
+    }
+    Some(progress)
+}
+
 fn dirty_counts(cwd: &Path) -> Result<DirtyCounts, String> {
     let output = git(
         cwd,
@@ -517,6 +645,7 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
             "refs/heads/",
         ],
     )?;
+    let merge_context = cached_merge_context(cwd, &common_dir, &config.base_branch, &metadata);
     let branch_snapshots = metadata
         .lines()
         .filter_map(|line| {
@@ -550,11 +679,21 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                         .lines()
                         .filter_map(|line| {
                             let (candidate, candidate_head) = line.split_once('\0')?;
-                            (candidate != name && candidate_head != head).then(|| candidate.to_string())
+                            (candidate != name && candidate_head != head)
+                                .then(|| candidate.to_string())
                         })
                         .collect()
                 })
                 .unwrap_or_default()
+            };
+            let merge_progress = if name == config.base_branch {
+                None
+            } else if untouched_local_branch {
+                Some(MergeProgress::default())
+            } else {
+                merge_context.as_deref().and_then(|context| {
+                    branch_merge_progress(cwd, &name, &config.base_branch, context)
+                })
             };
             Some(BranchSnapshot {
                 is_base: name == config.base_branch,
@@ -562,6 +701,7 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                     .as_ref()
                     .map(|names| names.lines().any(|candidate| candidate == name)),
                 merged_into_branches,
+                merge_progress,
                 name,
                 head,
                 latest_commit_at,
@@ -719,11 +859,57 @@ mod tests {
         repo.git(&["commit", "-am", "integration work"]);
 
         let snapshot = scan_project(&repo.config()).unwrap();
-        let feature = snapshot.branches.iter().find(|branch| branch.name == "feature").unwrap();
+        let feature = snapshot
+            .branches
+            .iter()
+            .find(|branch| branch.name == "feature")
+            .unwrap();
         assert_eq!(feature.merged_into_base, Some(false));
         assert_eq!(feature.merged_into_branches, vec!["integration"]);
-        let integration = snapshot.branches.iter().find(|branch| branch.name == "integration").unwrap();
+        let integration = snapshot
+            .branches
+            .iter()
+            .find(|branch| branch.name == "integration")
+            .unwrap();
         assert!(integration.merged_into_branches.is_empty());
+    }
+
+    #[test]
+    fn counts_equivalent_and_unmerged_branch_commits() {
+        let repo = Repository::new();
+        repo.git(&["switch", "-c", "feature"]);
+        fs::write(repo.root.join("tracked.txt"), "first\n").unwrap();
+        repo.git(&["commit", "-am", "first feature change"]);
+        let first = repo.git(&["rev-parse", "HEAD"]);
+        fs::write(repo.root.join("tracked.txt"), "second\n").unwrap();
+        repo.git(&["commit", "-am", "second feature change"]);
+        repo.git(&["switch", "base"]);
+        fs::write(repo.root.join("base-only.txt"), "base\n").unwrap();
+        repo.git(&["add", "base-only.txt"]);
+        repo.git(&["commit", "-m", "unrelated base change"]);
+        repo.git(&["cherry-pick", first.trim()]);
+
+        let context = build_merge_context(&repo.root, "base").unwrap();
+        let progress = branch_merge_progress(&repo.root, "feature", "base", &context).unwrap();
+        assert_eq!(progress.total, 2);
+        assert_eq!(progress.merged, 1);
+        assert_eq!(progress.equivalent, 1);
+    }
+
+    #[test]
+    fn counts_commits_on_a_branch_checked_out_from_remote() {
+        let repo = Repository::new();
+        repo.git(&["switch", "-c", "seed"]);
+        fs::write(repo.root.join("tracked.txt"), "remote work\n").unwrap();
+        repo.git(&["commit", "-am", "remote feature work"]);
+        repo.git(&["update-ref", "refs/remotes/origin/feature", "HEAD"]);
+        repo.git(&["switch", "base"]);
+        repo.git(&["switch", "-c", "feature", "origin/feature"]);
+
+        let context = build_merge_context(&repo.root, "base").unwrap();
+        let progress = branch_merge_progress(&repo.root, "feature", "base", &context).unwrap();
+        assert_eq!(progress.total, 1);
+        assert_eq!(progress.merged, 0);
     }
 
     #[test]
@@ -868,16 +1054,26 @@ mod tests {
         repo.git(&["switch", "-c", "seed"]);
         fs::write(repo.root.join("tracked.txt"), "older work\n").unwrap();
         repo.git(&[
-            "-c", "user.name=Older", "-c", "user.email=older@example.test",
-            "commit", "-am", "older work",
+            "-c",
+            "user.name=Older",
+            "-c",
+            "user.email=older@example.test",
+            "commit",
+            "-am",
+            "older work",
         ]);
         repo.git(&["update-ref", "refs/remotes/origin/seed", "HEAD"]);
         repo.git(&["switch", "base"]);
         repo.git(&["switch", "-c", "feature", "origin/seed"]);
         fs::write(repo.root.join("tracked.txt"), "new work\n").unwrap();
         repo.git(&[
-            "-c", "user.name=Newer", "-c", "user.email=newer@example.test",
-            "commit", "-am", "new work",
+            "-c",
+            "user.name=Newer",
+            "-c",
+            "user.email=newer@example.test",
+            "commit",
+            "-am",
+            "new work",
         ]);
 
         let people = branch_people(&repo.root, "feature", "base");

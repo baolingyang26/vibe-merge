@@ -5,7 +5,7 @@ import type { BranchSnapshot, ProjectStatus, WorktreeSnapshot } from '../src/sta
 
 const branch: BranchSnapshot = {
   name: 'feature', head: 'a'.repeat(40), latestCommitAt: 100,
-  latestCommitSubject: 'change', mergedIntoBase: false, mergedIntoBranches: [], isBase: false,
+  latestCommitSubject: 'change', mergedIntoBase: false, mergedIntoBranches: [], mergeProgress: { merged: 0, total: 1, equivalent: 0 }, isBase: false,
   worktreePath: '/repo/feature',
   people: { creator: null, contributors: [], scope: 'unique' },
 };
