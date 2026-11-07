@@ -54,6 +54,8 @@ pub struct BranchSnapshot {
     pub merge_progress: Option<MergeProgress>,
     pub is_base: bool,
     pub worktree_path: Option<String>,
+    pub upstream: Option<String>,
+    pub ahead_of_upstream: Option<usize>,
     pub people: BranchPeople,
 }
 
@@ -561,6 +563,30 @@ fn compare_branch(cwd: &Path, base: &str) -> Result<BranchComparison, String> {
     })
 }
 
+fn branch_upstream(cwd: &Path, name: &str) -> (Option<String>, Option<usize>) {
+    let upstream = git_text(
+        cwd,
+        &[
+            "for-each-ref",
+            "--format=%(upstream:short)",
+            &format!("refs/heads/{name}"),
+        ],
+    )
+    .ok()
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty());
+    let Some(upstream) = upstream else {
+        return (None, None);
+    };
+    let ahead = git_text(
+        cwd,
+        &["rev-list", "--count", &format!("{upstream}..refs/heads/{name}")],
+    )
+    .ok()
+    .and_then(|value| value.trim().parse().ok());
+    (Some(upstream), ahead)
+}
+
 pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
     let cwd = Path::new(&config.path);
     let common_dir = git_text(
@@ -659,6 +685,7 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                 .find(|tree| tree.branch.as_deref() == Some(name.as_str()))
                 .map(|tree| tree.path.clone());
             let people = branch_people(cwd, &name, &config.base_branch);
+            let (upstream, ahead_of_upstream) = branch_upstream(cwd, &name);
             let untouched_local_branch = people.creator.is_some()
                 && people.scope == "sinceCreation"
                 && people.contributors.is_empty();
@@ -707,6 +734,8 @@ pub fn scan_project(config: &ProjectConfig) -> Result<ProjectSnapshot, String> {
                 latest_commit_at,
                 latest_commit_subject,
                 worktree_path,
+                upstream,
+                ahead_of_upstream,
                 people,
             })
         })

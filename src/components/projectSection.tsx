@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
-import type { DeploymentEvidence, GithubAvatar, ProjectStatus } from '../statusTypes';
+import type { DeploymentEvidence, GithubAvatar, ProjectStatus, PullRequestEvidence } from '../statusTypes';
+import type { PullRequestLookup } from '../branchProgress';
 import { hasChanges, hasWorktreeRisk } from '../statusTypes';
 import { BranchRow } from './branchRow';
 import { BranchEvidence } from './branchEvidence';
@@ -18,8 +19,9 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
   nowSeconds: number;
   onRefresh: () => Promise<void>;
 }) => {
-  const [deployments, setDeployments] = useState<DeploymentEvidence[]>([]);
+  const [, setDeployments] = useState<DeploymentEvidence[]>([]);
   const [avatars, setAvatars] = useState<Record<string, GithubAvatar>>({});
+  const [pullRequests, setPullRequests] = useState<PullRequestLookup>({ status: 'idle', pullRequests: [] });
   const branches = project.git?.branches.filter((branch) => {
     if (!showAllBranches && !branch.worktreePath) return false;
     const worktree = project.git?.worktrees.find((item) => item.path === branch.worktreePath);
@@ -46,6 +48,16 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
     void request.then((result) => { if (mounted) setAvatars(result); }, () => { avatarRequests.delete(key); if (mounted) setAvatars({}); });
     return () => { mounted = false; };
   }, [expanded, project.config.id, sampleKey]);
+  useEffect(() => {
+    if (!expanded || !project.git) return;
+    let mounted = true;
+    setPullRequests({ status: 'loading', pullRequests: [] });
+    void invoke<PullRequestEvidence[]>('load_project_pull_requests', { path: project.config.path }).then(
+      (items) => { if (mounted) setPullRequests({ status: 'observed', pullRequests: items }); },
+      (error) => { if (mounted) setPullRequests({ status: 'unknown', pullRequests: [], reason: `GitHub 暂不可用：${String(error)}` }); },
+    );
+    return () => { mounted = false; };
+  }, [expanded, project.config.path, project.git?.observedAt]);
   const avatarsByEmail: Record<string, GithubAvatar> = {};
   for (const branch of project.git?.branches ?? []) {
     for (const person of branch.people.contributors) {
@@ -58,7 +70,7 @@ export const ProjectSection = ({ project, query, filter, showMerged, showAllBran
   return <section className="project" aria-label={project.config.path}>
     <p className="projectMeta"><strong>{project.git?.branchCount ?? '?'}</strong> 个本地分支 <span className="metaDivider" aria-hidden="true">·</span> <strong>{project.git?.worktrees.length ?? '?'}</strong> 个工作目录 <span className="metaDivider" aria-hidden="true">·</span> 基线 <code>{project.config.baseBranch}</code></p>
     {project.error && <p className="error">{project.error}</p>}
-    {branches?.map((branch) => <BranchRow key={branch.name} branch={branch} project={project} deployments={deployments} avatars={avatars} avatarsByEmail={avatarsByEmail} nowSeconds={nowSeconds} onRefresh={onRefresh} />)}
+    {branches?.map((branch) => <BranchRow key={branch.name} branch={branch} project={project} pullRequests={pullRequests} avatars={avatars} avatarsByEmail={avatarsByEmail} nowSeconds={nowSeconds} onRefresh={onRefresh} />)}
     {detached?.map((worktree) => <article className="branchRow" key={worktree.path}><div className="branchHeading"><h3>分离 HEAD</h3></div><p className="commitLine"><code>{worktree.head.slice(0, 8)}</code> · {worktree.path}</p><BranchEvidence name="分离 HEAD" worktree={worktree} project={project} /></article>)}
     {branches?.length === 0 && detached?.length === 0 && <p className="empty">没有符合条件的分支。</p>}
     <DeploymentPanel path={path} onEvidence={setDeployments} autoCheck={expanded && project.config.baseBranch === 'PA-home-page'} />

@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import type { BranchSnapshot, DeploymentEvidence, GithubAvatar, ProjectStatus } from '../statusTypes';
+import type { BranchSnapshot, GithubAvatar, ProjectStatus } from '../statusTypes';
 import { evidenceTime, isActiveDevelopment, relativeTime } from '../statusTypes';
 import { BranchEvidence } from './branchEvidence';
 import { BranchProgress } from './branchProgress';
-import { getBranchProgress } from '../branchProgress';
+import { getBranchProgress, type PullRequestLookup } from '../branchProgress';
 import { PanelIcon } from './panelIcon';
 import { BranchActions } from './branchActions';
 import { useBranchAdvice } from '../branchAdvice';
 import { BranchAdviceView } from './branchAdvice';
 import { BranchPeople } from './branchPeople';
 
-export const BranchRow = ({ branch, project, deployments, avatars, avatarsByEmail, nowSeconds, onRefresh }: {
+export const BranchRow = ({ branch, project, pullRequests, avatars, avatarsByEmail, nowSeconds, onRefresh }: {
   branch: BranchSnapshot;
   project: ProjectStatus;
-  deployments: DeploymentEvidence[];
+  pullRequests: PullRequestLookup;
   avatars: Record<string, GithubAvatar>;
   avatarsByEmail: Record<string, GithubAvatar>;
   nowSeconds: number;
@@ -23,7 +23,7 @@ export const BranchRow = ({ branch, project, deployments, avatars, avatarsByEmai
   const worktree = project.git?.worktrees.find((item) => item.path === branch.worktreePath);
   const session = project.sessions.find((item) => item.worktreePath === branch.worktreePath);
   const coding = worktree ? isActiveDevelopment(worktree, session?.evidence, nowSeconds) : false;
-  const progress = getBranchProgress(branch, worktree, deployments);
+  const progress = getBranchProgress(branch, worktree, project.config.baseBranch, pullRequests);
   const analysisRequested = requestedHead === branch.head;
   const advice = useBranchAdvice(project.config.id, branch.name, branch.head, project.config.baseBranch, analysisRequested && !branch.isBase);
   return <article className="branchRow">

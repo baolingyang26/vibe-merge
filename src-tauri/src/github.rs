@@ -106,8 +106,12 @@ pub struct PullRequest {
     pub url: String,
     pub state: String,
     pub base_ref_name: String,
+    #[serde(default)]
+    pub head_ref_name: String,
     pub head_ref_oid: String,
     pub is_draft: bool,
+    #[serde(default)]
+    pub updated_at: String,
 }
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -241,6 +245,28 @@ fn unknown(reason: &str) -> GithubEvidence {
 }
 fn parse_prs(raw: &str) -> Result<Vec<PullRequest>, serde_json::Error> {
     serde_json::from_str(raw)
+}
+
+/// Read PR summaries for a whole repository in one GitHub CLI request.
+pub fn list_project_pull_requests(path: &Path) -> Result<Vec<PullRequest>, String> {
+    if run(path, "git", &["remote", "get-url", "origin"])?.trim().is_empty() {
+        return Err("repository has no origin remote".into());
+    }
+    let raw = run(
+        path,
+        "gh",
+        &[
+            "pr",
+            "list",
+            "--state",
+            "all",
+            "--limit",
+            "1000",
+            "--json",
+            "number,url,state,baseRefName,headRefName,headRefOid,isDraft,updatedAt",
+        ],
+    )?;
+    parse_prs(&raw).map_err(|_| "invalid PR response".into())
 }
 
 // Pipes are drained concurrently so a large response cannot deadlock the timeout.

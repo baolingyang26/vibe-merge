@@ -4,11 +4,12 @@ export interface PersonEvidence { name: string; email: string; commits: number; 
 export interface BranchPeople { creator: PersonEvidence | null; contributors: PersonEvidence[]; scope: 'sinceCreation' | 'unique' | 'recent' }
 export interface GithubAvatar { login: string; avatarUrl: string }
 export interface MergeProgress { merged: number; total: number; equivalent: number }
-export interface BranchSnapshot { name: string; head: string; latestCommitAt: number | null; latestCommitSubject: string; mergedIntoBase: boolean | null; mergedIntoBranches: string[]; mergeProgress: MergeProgress | null; isBase: boolean; worktreePath: string | null; people: BranchPeople }
+export interface BranchSnapshot { name: string; head: string; latestCommitAt: number | null; latestCommitSubject: string; mergedIntoBase: boolean | null; mergedIntoBranches: string[]; mergeProgress: MergeProgress | null; isBase: boolean; worktreePath: string | null; upstream: string | null; aheadOfUpstream: number | null; people: BranchPeople }
 export interface SessionEvidence { sessions: { sessionId: string; cwd: string; lastSeen: number; active: boolean }[]; sharedWorktreeWarning: boolean; malformedLines: number }
 export interface ProjectStatus { config: ProjectConfig; git: { id: string; path: string; baseBranch: string; currentGitEmail: string | null; commonDir: string; branchCount: number; branches: BranchSnapshot[]; worktrees: WorktreeSnapshot[]; observedAt: number } | null; error: string | null; sessions: { worktreePath: string; evidence: SessionEvidence | null; error: string | null }[] }
 export interface StatusSnapshot { projects: ProjectStatus[]; observedAt: number }
 export interface GithubEvidence { status: string; reason?: string; observedAt: number; headSha: string; pullRequests: { number: number; url: string; state: string; baseRefName: string; headRefOid: string; isDraft: boolean }[]; checksState: 'passed' | 'failed' | 'pending' | 'none' | 'unknown'; checks: { name: string; state: 'passed' | 'failed' | 'pending' | 'unknown'; url: string | null; source: string }[] }
+export interface PullRequestEvidence { number: number; url: string; state: string; baseRefName: string; headRefName: string; headRefOid: string; isDraft: boolean; updatedAt: string }
 export const hasChanges = (worktree: WorktreeSnapshot) => worktree.dirty.staged + worktree.dirty.unstaged + worktree.dirty.untracked > 0;
 export const isActiveDevelopment = (worktree: WorktreeSnapshot, evidence: SessionEvidence | null | undefined, nowSeconds: number): boolean => {
   return !worktree.scanError && Boolean(evidence?.sessions.some((session) =>

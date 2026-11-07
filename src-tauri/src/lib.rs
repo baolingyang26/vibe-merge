@@ -327,6 +327,15 @@ async fn load_github_evidence(
 }
 
 #[tauri::command]
+async fn load_project_pull_requests(path: String) -> Result<Vec<github::PullRequest>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        github::list_project_pull_requests(std::path::Path::new(&path))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 async fn resolve_github_avatars(
     app: tauri::AppHandle,
     project_id: String,
@@ -620,6 +629,7 @@ pub fn run() {
             remove_project,
             scan_status,
             load_github_evidence,
+            load_project_pull_requests,
             resolve_github_avatars,
             prepare_commit,
             commit_and_push,
