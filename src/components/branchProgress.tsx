@@ -8,6 +8,6 @@ export const BranchProgress = ({ stages }: { stages: [BranchStage, BranchStage, 
         {stage.indicator === 'cross' && <svg viewBox="0 0 12 12"><path d="m3 3 6 6M9 3 3 9" /></svg>}
       </span>
       <span className="progressName">{stage.name}</span>
-      {stage.value && <span className="progressValue">{stage.value}</span>}
+      {stage.value && <span className="progressValue">{stage.valueHref ? <a className="progressValueLink" href={stage.valueHref} rel="noreferrer" target="_blank" aria-label={`打开 PR ${stage.value}`}>{stage.value}</a> : stage.value}</span>}
     </div>)}
   </div>;

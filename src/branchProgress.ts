@@ -2,7 +2,7 @@ import type { BranchSnapshot, PullRequestEvidence, WorktreeSnapshot } from './st
 import { hasChanges } from './statusTypes';
 
 export type StageTone = 'done' | 'attention' | 'unknown' | 'delegated';
-export interface BranchStage { name: string; detail: string; tone: StageTone; value?: string; indicator?: 'check' | 'cross' }
+export interface BranchStage { name: string; detail: string; tone: StageTone; value?: string; valueHref?: string; indicator?: 'check' | 'cross' }
 export interface PullRequestLookup { status: 'idle' | 'loading' | 'observed' | 'unknown'; pullRequests: PullRequestEvidence[]; reason?: string }
 
 export const getBranchProgress = (branch: BranchSnapshot, worktree: WorktreeSnapshot | undefined, baseBranch: string, pullRequests: PullRequestLookup): [BranchStage, BranchStage, BranchStage, BranchStage] => {
@@ -31,7 +31,7 @@ export const getBranchProgress = (branch: BranchSnapshot, worktree: WorktreeSnap
     : pullRequests.status === 'unknown'
       ? { name: '提 PR', detail: pullRequests.reason ?? 'PR 状态未核实', tone: 'unknown' }
       : pr
-        ? { name: '提 PR', detail: `已创建 PR #${pr.number}${pr.isDraft ? '（草稿）' : ''}`, tone: 'done', value: `#${pr.number}` }
+        ? { name: '提 PR', detail: `已创建 PR #${pr.number}${pr.isDraft ? '（草稿）' : ''}`, tone: 'done', value: `#${pr.number}`, valueHref: pr.url }
         : { name: '提 PR', detail: '尚未创建 PR', tone: 'attention' };
 
   const outcome: BranchStage = pullRequests.status !== 'observed'

@@ -118,14 +118,17 @@ code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .progressStage { position: relative; display: flex; flex-direction: column; gap: 5px; min-width: 0; color: var(--secondary); font-size: 12px; }
 .progressStage:not(:last-child)::after { content: ''; position: absolute; top: 6.5px; left: 18px; right: -5px; height: 1px; background: var(--line); }
 .progressStage.is-linked::after { background: var(--progress-complete); }
-.progressDot { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1.5px solid #aeb4bf; border-radius: 50%; background: var(--surface); }
-.progressStage.is-done .progressDot { border-color: var(--progress-complete); background: var(--progress-complete); }
+.progressDot { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: transparent; }
+.progressDot:not(.is-check):not(.is-cross)::before { content: ''; display: block; width: 8px; height: 8px; border: 1.5px solid #aeb4bf; border-radius: 50%; background: var(--surface); }
+.progressStage.is-done .progressDot:not(.is-check):not(.is-cross)::before { border-color: var(--progress-complete); background: var(--progress-complete); }
 .progressDot.is-check, .progressDot.is-cross { border: 0; color: white; }
 .progressStage .progressDot.is-check { background: #27834c; }
 .progressStage .progressDot.is-cross { background: #c83d43; }
 .progressDot svg { display: block; width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .progressName { color: var(--text); font-weight: 600; }
 .progressValue { color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 550; }
+.progressValueLink { color: var(--progress-complete); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--progress-complete) 45%, transparent); text-underline-offset: 2px; }
+.progressValueLink:hover { text-decoration-color: currentColor; }
 .branchAdvice { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-subtle); color: var(--secondary); font-size: 12px; }
 .branchAdvice.isCompact { margin-top: 10px; }
 .branchAdvice.is-unsuitable { border-color: #d9b7b7; background: #fdf8f8; }
