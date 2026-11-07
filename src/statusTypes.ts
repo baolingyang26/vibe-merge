@@ -11,8 +11,8 @@ export interface StatusSnapshot { projects: ProjectStatus[]; observedAt: number 
 export interface GithubEvidence { status: string; reason?: string; observedAt: number; headSha: string; pullRequests: { number: number; url: string; state: string; baseRefName: string; headRefOid: string; isDraft: boolean }[]; checksState: 'passed' | 'failed' | 'pending' | 'none' | 'unknown'; checks: { name: string; state: 'passed' | 'failed' | 'pending' | 'unknown'; url: string | null; source: string }[] }
 export const hasChanges = (worktree: WorktreeSnapshot) => worktree.dirty.staged + worktree.dirty.unstaged + worktree.dirty.untracked > 0;
 export const isActiveDevelopment = (worktree: WorktreeSnapshot, evidence: SessionEvidence | null | undefined, nowSeconds: number): boolean => {
-  const changedAt = worktree.dirty.lastChangedAt;
-  return !worktree.scanError && changedAt !== null && changedAt <= nowSeconds && nowSeconds - changedAt <= 300 && Boolean(evidence?.sessions.some((session) => session.active));
+  return !worktree.scanError && Boolean(evidence?.sessions.some((session) =>
+    session.active && session.lastSeen <= nowSeconds && nowSeconds - session.lastSeen < 300));
 };
 export const evidenceTime = (value: number) => new Date(value < 1e12 ? value * 1000 : value).toLocaleString('zh-CN');
 export const relativeTime = (value: number | null, nowSeconds: number): string => {

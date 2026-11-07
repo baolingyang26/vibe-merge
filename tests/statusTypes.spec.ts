@@ -16,11 +16,11 @@ const sessions: SessionEvidence = {
   malformedLines: 0,
 };
 
-test("active development needs both a live Codex session and recent changed file", () => {
+test("active development follows a live Codex session even before files change", () => {
   expect(isActiveDevelopment(worktree, sessions, 120)).toBe(true);
   expect(isActiveDevelopment(worktree, sessions, 500)).toBe(false);
   expect(isActiveDevelopment(worktree, { ...sessions, sessions: [] }, 120)).toBe(false);
-  expect(isActiveDevelopment({ ...worktree, dirty: { ...worktree.dirty, lastChangedAt: null } }, sessions, 120)).toBe(false);
+  expect(isActiveDevelopment({ ...worktree, dirty: { ...worktree.dirty, lastChangedAt: null } }, sessions, 120)).toBe(true);
 });
 
 test("dock counts risks, active coding branches and merged non-base branches separately", () => {
