@@ -103,6 +103,7 @@ code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .branchHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 36px; }
 .branchTitle { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .branchHeading h3 { min-width: 0; margin: 0; font-size: 15px; font-weight: 650; line-height: 1.3; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.codingStatus { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--progress-complete); font-size: 11px; font-weight: 600; white-space: nowrap; }
 .branchPeople { display: flex; align-items: center; gap: 3px; flex: none; max-width: 156px; min-height: 28px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
 .personAvatar { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 23px; height: 23px; border: 1px solid var(--line); border-radius: 50%; background: var(--control); color: var(--secondary); font-size: 10px; font-weight: 650; line-height: 1; }
 .personAvatar img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }

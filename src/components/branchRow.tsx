@@ -27,7 +27,7 @@ export const BranchRow = ({ branch, project, deployments, avatars, avatarsByEmai
   const analysisRequested = requestedHead === branch.head;
   const advice = useBranchAdvice(project.config.id, branch.name, branch.head, project.config.baseBranch, analysisRequested && !branch.isBase);
   return <article className="branchRow">
-    <div className="branchHeading"><span className="branchSymbol"><PanelIcon name="branch" /></span><div className="branchTitle"><h3>{branch.name}</h3>{coding && <span className="codingSignal" role="img" aria-label="正在写代码" title="正在写代码" />}<BranchPeople people={branch.people} avatars={avatars} avatarsByEmail={avatarsByEmail} /></div></div>
+    <div className="branchHeading"><span className="branchSymbol"><PanelIcon name="branch" /></span><div className="branchTitle"><h3>{branch.name}</h3>{coding && <span className="codingStatus" role="status"><span className="codingSignal" aria-hidden="true" />修改中</span>}<BranchPeople people={branch.people} avatars={avatars} avatarsByEmail={avatarsByEmail} /></div></div>
     <p className="commitLine" title={branch.latestCommitAt === null ? undefined : evidenceTime(branch.latestCommitAt)}>
       <code>{branch.head.slice(0, 8)}</code> · 最近提交 {relativeTime(branch.latestCommitAt, nowSeconds)}
     </p>
