@@ -116,10 +116,14 @@ code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .commitSubject { margin: 0 0 10px; color: var(--text); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .branchProgress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 14px 0 1px; }
 .progressStage { position: relative; display: flex; flex-direction: column; gap: 5px; min-width: 0; color: var(--secondary); font-size: 12px; }
-.progressStage:not(:last-child)::after { content: ''; position: absolute; top: 4px; left: 13px; right: -5px; height: 1px; background: var(--line); }
+.progressStage:not(:last-child)::after { content: ''; position: absolute; top: 6.5px; left: 18px; right: -5px; height: 1px; background: var(--line); }
 .progressStage.is-linked::after { background: var(--progress-complete); }
-.progressDot { position: relative; z-index: 1; width: 9px; height: 9px; border: 1.5px solid #aeb4bf; border-radius: 50%; background: var(--surface); }
+.progressDot { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1.5px solid #aeb4bf; border-radius: 50%; background: var(--surface); }
 .progressStage.is-done .progressDot { border-color: var(--progress-complete); background: var(--progress-complete); }
+.progressDot.is-check, .progressDot.is-cross { border: 0; color: white; }
+.progressStage .progressDot.is-check { background: #27834c; }
+.progressStage .progressDot.is-cross { background: #c83d43; }
+.progressDot svg { display: block; width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .progressName { color: var(--text); font-weight: 600; }
 .progressValue { color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 550; }
 .branchAdvice { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-subtle); color: var(--secondary); font-size: 12px; }

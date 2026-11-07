@@ -2,7 +2,7 @@ import type { BranchSnapshot, PullRequestEvidence, WorktreeSnapshot } from './st
 import { hasChanges } from './statusTypes';
 
 export type StageTone = 'done' | 'attention' | 'unknown' | 'delegated';
-export interface BranchStage { name: string; detail: string; tone: StageTone; value?: string }
+export interface BranchStage { name: string; detail: string; tone: StageTone; value?: string; indicator?: 'check' | 'cross' }
 export interface PullRequestLookup { status: 'idle' | 'loading' | 'observed' | 'unknown'; pullRequests: PullRequestEvidence[]; reason?: string }
 
 export const getBranchProgress = (branch: BranchSnapshot, worktree: WorktreeSnapshot | undefined, baseBranch: string, pullRequests: PullRequestLookup): [BranchStage, BranchStage, BranchStage, BranchStage] => {
@@ -39,9 +39,9 @@ export const getBranchProgress = (branch: BranchSnapshot, worktree: WorktreeSnap
     : !pr
       ? { name: '已合并/已拒绝', detail: '创建 PR 后显示结果', tone: 'unknown' }
       : pr.state === 'MERGED'
-        ? { name: '已合并/已拒绝', detail: `PR #${pr.number} 已合并`, tone: 'done' }
+        ? { name: '已合并/已拒绝', detail: `PR #${pr.number} 已合并`, tone: 'done', indicator: 'check' }
         : pr.state === 'CLOSED'
-          ? { name: '已合并/已拒绝', detail: `PR #${pr.number} 已拒绝或关闭`, tone: 'attention' }
+          ? { name: '已合并/已拒绝', detail: `PR #${pr.number} 已拒绝或关闭`, tone: 'attention', indicator: 'cross' }
           : { name: '已合并/已拒绝', detail: `PR #${pr.number} 等待审核与合并`, tone: 'unknown' };
 
   return [commit, push, request, outcome];
